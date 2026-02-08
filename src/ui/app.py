@@ -127,7 +127,7 @@ class App(ctk.CTk):
         self.settings_button = ctk.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Settings",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       anchor="w", command=self.settings_button_event)
-        self.settings_button.grid(row=4, column=0, sticky="ew")
+        self.settings_button.grid(row=4, column=0, sticky="ew", pady=(0, 20)) # Added bottom padding
 
     def select_frame(self, name):
         # set button color for selected button
@@ -180,13 +180,14 @@ class HomeFrame(ctk.CTkFrame):
         
         # Header: Currently Tracking (Auto)
         self.header_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.header_frame.pack(fill="x", padx=20, pady=10)
+        self.header_frame.pack(fill="x", padx=30, pady=(30, 15))
         
         self.status_label = ctk.CTkLabel(self.header_frame, text="Active Sessions:", font=ctk.CTkFont(size=14, weight="bold"))
         self.status_label.pack(side="left", anchor="n", pady=2)
         
         # Container for dynamic session rows
-        self.sessions_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        # Container for dynamic session rows (Horizontal Scroll)
+        self.sessions_frame = ctk.CTkScrollableFrame(self.header_frame, fg_color="transparent", orientation="horizontal", height=140)
         self.sessions_frame.pack(side="left", padx=10, fill="x", expand=True)
         
         # Global Timer (Total Today) - Styled Box
@@ -203,7 +204,7 @@ class HomeFrame(ctk.CTkFrame):
         
         # Sub-header: App List + Controls
         self.subheader = ctk.CTkFrame(self, fg_color="transparent")
-        self.subheader.pack(fill="x", padx=20, pady=(10, 5))
+        self.subheader.pack(fill="x", padx=30, pady=(15, 10))
         
         # Row 1: Label + Add IRL
         row1 = ctk.CTkFrame(self.subheader, fg_color="transparent")
@@ -227,13 +228,13 @@ class HomeFrame(ctk.CTkFrame):
         self.search_var.trace_add("write", self.on_search_change)
         
         # Top Apps Section (New)
-        ctk.CTkLabel(self, text="Top Used", font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x", padx=20, pady=(10,0))
+        ctk.CTkLabel(self, text="Top Used", font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x", padx=30, pady=(20, 5))
         self.top_apps_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.top_apps_frame.pack(fill="x", padx=20, pady=5)
+        self.top_apps_frame.pack(fill="x", padx=30, pady=5)
         
-        ctk.CTkLabel(self, text="All Applications", font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x", padx=20, pady=(10,0))
+        ctk.CTkLabel(self, text="All Applications", font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x", padx=30, pady=(20, 5))
         self.apps_scroll = ctk.CTkScrollableFrame(self, label_text=None)
-        self.apps_scroll.pack(fill="both", expand=True, padx=20, pady=5)
+        self.apps_scroll.pack(fill="both", expand=True, padx=30, pady=(5, 30))
         
         self.app_rows = {} # Map unique_row_key -> {frame, name_lbl, ...}
         self.session_cards = {} # Map log_id -> {card_frame, timer_label, ...} for smooth updates
@@ -685,8 +686,24 @@ class HomeFrame(ctk.CTkFrame):
             return
 
         # Create New Card
-        card = ctk.CTkFrame(self.sessions_frame, fg_color="#2b2b2b", corner_radius=10)
-        card.pack(fill="x", pady=5)
+        # Determine if this card is for the currently focused app
+        is_focused = False
+        if self.tracker.current_activity and self.tracker.current_activity.name == activity.name:
+             is_focused = True
+             
+        # Style based on focus
+        # Standard size: 200x120 approx. Focused: slightly larger or border highlight?
+        # Fixed size frames are tricky with pack/grid unless we use propagate(False).
+        # Let's use width/height and pack_propagate(False).
+        
+        base_width = 220 if is_focused else 200
+        base_height = 130 if is_focused else 120
+        border_c = "#4cc9f0" if is_focused else "#333333"
+        border_w = 2 if is_focused else 1
+        
+        card = ctk.CTkFrame(self.sessions_frame, fg_color="#2b2b2b", corner_radius=12, border_width=border_w, border_color=border_c, width=base_width, height=base_height)
+        card.pack(side="left", padx=5, pady=2)
+        card.pack_propagate(False) # Enforce size
         
         # Row 1: ... (Same as before)
         row1 = ctk.CTkFrame(card, fg_color="transparent")
@@ -705,40 +722,44 @@ class HomeFrame(ctk.CTkFrame):
                 icon_image = ctk.CTkImage(img, size=(20, 20))
             except: pass
         
-        ctk.CTkLabel(row1, text="", image=icon_image, width=24).pack(side="left")
-        ctk.CTkLabel(row1, text=activity.name, font=ctk.CTkFont(size=13, weight="bold")).pack(side="left", padx=5)
+        ctk.CTkLabel(row1, text="", image=icon_image, width=20).pack(side="left")
+        
+        # Name: Truncate if needed
+        name_text = activity.name
+        if len(name_text) > 18: name_text = name_text[:15] + "..."
+        ctk.CTkLabel(row1, text=name_text, font=ctk.CTkFont(size=12, weight="bold")).pack(side="left", padx=5)
         
         badge_text = "AUTO" if is_auto else "FORCED"
         badge_color = "#1f6aa5" if is_auto else "#a55a1f"
-        ctk.CTkLabel(row1, text=badge_text, font=ctk.CTkFont(size=10, weight="bold"), fg_color=badge_color, corner_radius=4).pack(side="right")
+        ctk.CTkLabel(row1, text=badge_text, font=ctk.CTkFont(size=9, weight="bold"), fg_color=badge_color, corner_radius=4).pack(side="right")
         
         # Description
         desc_lbl = None
         if activity.description:
             row_desc = ctk.CTkFrame(card, fg_color="transparent")
-            row_desc.pack(fill="x", padx=35, pady=(0, 0))
+            row_desc.pack(fill="x", padx=10, pady=(0, 0))
             dtext = activity.description
-            if len(dtext) > 50: dtext = dtext[:47] + "..."
-            desc_lbl = ctk.CTkLabel(row_desc, text=dtext, font=ctk.CTkFont(size=11), text_color="gray80", anchor="w")
+            if len(dtext) > 40: dtext = dtext[:37] + "..."
+            desc_lbl = ctk.CTkLabel(row_desc, text=dtext, font=ctk.CTkFont(size=10), text_color="gray80", anchor="w")
             desc_lbl.pack(fill="x")
 
         # Timer
         row2 = ctk.CTkFrame(card, fg_color="transparent")
         row2.pack(fill="x", padx=5, pady=0)
-        timer_lbl = ctk.CTkLabel(row2, text=timer_str, font=ctk.CTkFont(size=20, weight="bold", family="Consolas"))
-        timer_lbl.pack(side="left", padx=30)
+        timer_lbl = ctk.CTkLabel(row2, text=timer_str, font=ctk.CTkFont(size=16, weight="bold", family="Consolas"))
+        timer_lbl.pack(side="left", padx=10) # Reduced from 30
         
         # Stats Row (Restored)
         row3 = ctk.CTkFrame(card, fg_color="transparent")
-        row3.pack(fill="x", padx=5, pady=(0, 5))
-        stats_lbl = ctk.CTkLabel(row3, text=stats_text, font=ctk.CTkFont(size=11), text_color="gray")
-        stats_lbl.pack(side="left", padx=30)
+        row3.pack(fill="x", padx=5, pady=(0, 2))
+        stats_lbl = ctk.CTkLabel(row3, text=stats_text, font=ctk.CTkFont(size=10), text_color="gray")
+        stats_lbl.pack(side="left", padx=10) # Reduced from 30
 
         # Stop Button
         row4 = ctk.CTkFrame(card, fg_color="transparent")
-        row4.pack(fill="x", padx=5, pady=(0, 5))
-        ctk.CTkButton(row4, text="Stop", width=60, height=24, fg_color="gray", hover_color="darkred", 
-                     command=lambda: self.stop_session(log_id, is_auto)).pack(side="right")
+        row4.pack(fill="x", padx=5, pady=(0, 5), side="bottom") # Align to bottom
+        ctk.CTkButton(row4, text="Stop", width=50, height=20, font=ctk.CTkFont(size=10), fg_color="gray", hover_color="darkred", 
+                      command=lambda: self.stop_session(log_id, is_auto)).pack(side="right")
 
         self.session_cards[log_id] = {
             'card': card,
@@ -941,15 +962,17 @@ class HomeFrame(ctk.CTkFrame):
                 del self.app_rows[row_key]
 
     def create_app_row(self, row_key, real_key, info, parent_frame):
-        # Style difference for Top Apps
+        # Unified Card Style
         is_top = (parent_frame == self.top_apps_frame)
-        bg_color = "gray10" if is_top else None 
-        border_width = 2 if is_top else 0
-        border_color = "#3B8ED0" if is_top else None
-        corner_radius = 10 if is_top else 0
         
-        frame = ctk.CTkFrame(parent_frame, fg_color=bg_color, border_width=border_width, border_color=border_color, corner_radius=corner_radius)
-        frame.pack(fill="x", pady=4 if is_top else 2, padx=2 if is_top else 0, ipady=5 if is_top else 0)
+        # Subtle distinction for Top apps vs regular, but unified "card" look
+        bg_color = "#2b2b2b" if is_top else "#212121"
+        hover_color = "#333333" if is_top else "#2a2a2a"
+        border_color = "#3B8ED0" if is_top else "#333333"
+        border_width = 1
+        
+        frame = ctk.CTkFrame(parent_frame, fg_color=bg_color, corner_radius=8, border_width=border_width, border_color=border_color)
+        frame.pack(fill="x", pady=4, padx=5, ipady=5) # increased vertical spacing
         
         name = info['process_name']
         is_irl = info['is_irl']
@@ -1090,7 +1113,7 @@ class ActivitiesFrame(ctk.CTkFrame):
         self.icon_manager = icon_manager
         
         self.label = ctk.CTkLabel(self, text="Manage Activities", font=ctk.CTkFont(size=20, weight="bold"))
-        self.label.grid(row=0, column=0, padx=20, pady=20, sticky="w")
+        self.label.grid(row=0, column=0, padx=30, pady=30, sticky="w")
 
         self.add_button = ctk.CTkButton(self, text="Add IRL Activity", command=self.add_activity_dialog)
         self.add_button.grid(row=0, column=1, padx=20, pady=20, sticky="e")

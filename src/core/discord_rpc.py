@@ -11,23 +11,26 @@ class DiscordRPC:
         if self.connected:
             return
 
-        try:
-            self.rpc = Presence(self.client_id)
-            self.rpc.connect()
-            self.connected = True
-            print("Successfully connected to Discord RPC")
-        except Exception as e:
-            # Only print error if it's not the generic "pipe closed" which happens when Discord isn't running
-            # or specifically if it's an invalid ID
-            if "Client ID is Invalid" in str(e) or "Invalid pipe" in str(e):
-                print(f"Discord RPC Disabled: {e}")
-                # Disable attempts to prevent spam if ID is bad
+        def _connect_thread():
+            try:
+                self.rpc = Presence(self.client_id)
+                self.rpc.connect()
+                self.connected = True
+                print("Successfully connected to Discord RPC")
+            except Exception as e:
+                # Only print error if it's not the generic "pipe closed" which happens when Discord isn't running
+                # or specifically if it's an invalid ID
+                if "Client ID is Invalid" in str(e) or "Invalid pipe" in str(e):
+                    # Disable attempts to prevent spam if ID is bad
+                    self.connected = False
+                    return 
+                
+                print(f"Failed to connect to Discord RPC: {e}")
                 self.connected = False
-                return False
-            
-            print(f"Failed to connect to Discord RPC: {e}")
-            self.connected = False
-            return False
+
+        import threading
+        t = threading.Thread(target=_connect_thread, daemon=True)
+        t.start()
 
     def update(self, state, details=None, start=None, large_image=None, large_text=None):
         if not self.connected:
