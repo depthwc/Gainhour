@@ -1,0 +1,8 @@
+customtkinter
+pypresence
+psutil
+pywin32
+Pillow
+sqlalchemy
+matplotlib
+pystray
