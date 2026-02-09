@@ -29,7 +29,7 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("Gainhour")
-        self.geometry("1000x700")
+        self.geometry("1300x900")
         ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("blue")
         
@@ -187,7 +187,7 @@ class HomeFrame(ctk.CTkFrame):
         
         # Container for dynamic session rows
         # Container for dynamic session rows (Horizontal Scroll)
-        self.sessions_frame = ctk.CTkScrollableFrame(self.header_frame, fg_color="transparent", orientation="horizontal", height=140)
+        self.sessions_frame = ctk.CTkScrollableFrame(self.header_frame, fg_color="transparent", orientation="horizontal", height=180)
         self.sessions_frame.pack(side="left", padx=10, fill="x", expand=True)
         
         # Global Timer (Total Today) - Styled Box
@@ -696,8 +696,8 @@ class HomeFrame(ctk.CTkFrame):
         # Fixed size frames are tricky with pack/grid unless we use propagate(False).
         # Let's use width/height and pack_propagate(False).
         
-        base_width = 220 if is_focused else 200
-        base_height = 130 if is_focused else 120
+        base_width = 230 if is_focused else 210
+        base_height = 170 if is_focused else 160
         border_c = "#4cc9f0" if is_focused else "#333333"
         border_w = 2 if is_focused else 1
         
@@ -757,8 +757,8 @@ class HomeFrame(ctk.CTkFrame):
 
         # Stop Button
         row4 = ctk.CTkFrame(card, fg_color="transparent")
-        row4.pack(fill="x", padx=5, pady=(0, 5), side="bottom") # Align to bottom
-        ctk.CTkButton(row4, text="Stop", width=50, height=20, font=ctk.CTkFont(size=10), fg_color="gray", hover_color="darkred", 
+        row4.pack(fill="x", padx=5, pady=(2, 5), side="bottom") # Align to bottom
+        ctk.CTkButton(row4, text="Stop", width=60, height=24, font=ctk.CTkFont(size=11), fg_color="gray", hover_color="darkred", 
                       command=lambda: self.stop_session(log_id, is_auto)).pack(side="right")
 
         self.session_cards[log_id] = {
