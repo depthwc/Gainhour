@@ -17,6 +17,7 @@ class Activity(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     logs = relationship("ActivityLog", back_populates="activity")
+    description_logs = relationship("ActivityDescriptionLog", back_populates="activity")
 
     def __repr__(self):
         return f"<Activity(name='{self.name}', type='{self.type}')>"
@@ -34,6 +35,23 @@ class ActivityLog(Base):
 
     def __repr__(self):
         return f"<ActivityLog(activity_id='{self.activity_id}', start='{self.start_time}')>"
+
+class ActivityDescriptionLog(Base):
+    __tablename__ = 'activity_description_logs'
+
+    id = Column(Integer, primary_key=True)
+    activity_id = Column(Integer, ForeignKey('activities.id'))
+    description = Column(String, nullable=False)
+    start_time = Column(DateTime, default=datetime.utcnow)
+    end_time = Column(DateTime, nullable=True)
+    duration_seconds = Column(Integer, default=0)
+
+    activity = relationship("Activity", back_populates="description_logs")
+
+    def __repr__(self):
+        return f"<ActivityDescriptionLog(activity_id='{self.activity_id}', desc='{self.description}')>"
+
+
 
 class Setting(Base):
     __tablename__ = 'settings'

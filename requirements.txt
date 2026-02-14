@@ -1,8 +1,9 @@
-customtkinter
+PySide6
+qdarkstyle
 pypresence
 psutil
 pywin32
 Pillow
 sqlalchemy
 matplotlib
-pystray
+
