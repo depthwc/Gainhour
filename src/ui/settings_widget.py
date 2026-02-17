@@ -232,7 +232,7 @@ class SettingsWidget(QWidget):
         
         # Icon
         d_icon = QLabel()
-        d_pix = QPixmap("discord_icon.png")
+        d_pix = QPixmap("src/icons/discord_icon.png")
         if not d_pix.isNull():
             d_icon.setPixmap(d_pix.scaled(28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             discord_header.addWidget(d_icon)

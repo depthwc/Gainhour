@@ -34,6 +34,8 @@ class Tracker:
         
         
         self.discord = DiscordRPC(client_id="1469935146579918868")
+        self.discord_pinned_activity = None
+        self.discord_last_target_name = None
 
         
     def start(self):
@@ -137,11 +139,19 @@ class Tracker:
         # Ensure cleared on stop
         if self.discord.connected:
             self.discord.clear()
-        
+
     def set_discord_pin(self, activity):
+        """Manually pins an activity for Discord status."""
+        # If toggling off (passing likely same activity but logic handles external toggle state?)
+        # UI will pass activity to pin. If we want to unpin, UI should pass None?
+        # Or UI handles toggle.
+        # Let's assume UI passes activity to PIN. To UNPIN, pass None.
+        
         self.discord_pinned_activity = activity
-        # Force immediate update
-        self._update_discord()
+        print(f"DEBUG: Pinning Activity: {activity.name if activity else 'None'}")
+        self._update_discord() # Force immediate update
+        
+
         
     def _update_discord(self):
         if not self.discord.connected:
@@ -151,10 +161,24 @@ class Tracker:
         is_enabled = self.storage.get_setting("discord_enabled", "True") == "True"
         if not is_enabled:
             self.discord.clear()
+            self.discord_last_target_name = None # Ensure nothing is checked
             return
 
         # RESOLVE TARGET ACTIVITY
-        target = None
+        target = self.discord_pinned_activity
+        
+        # Verify if pinned target is still valid/running
+        is_pinned_valid = False
+        if target:
+            if self.current_activity and self.current_activity.id == target.id:
+                 is_pinned_valid = True
+            elif target.id in self.manual_sessions:
+                 is_pinned_valid = True
+            elif target.type == 'app' and target.name in self.open_sessions:
+                 is_pinned_valid = True
+            
+            if not is_pinned_valid:
+                target = None # Pin lost - Fallback to Auto
         
         
         # If no valid pin, use current activity
@@ -187,6 +211,7 @@ class Tracker:
                     state="Waiting for activity...",
                     start=self.session_start_time
                 )
+                self.discord_last_target_name = "Idling" # Hidden activity isn't "Live" as itself
                 return
                 
             # Determine State/Description
@@ -210,6 +235,7 @@ class Tracker:
                 state=state,
                 start=self.session_start_time
             )
+            self.discord_last_target_name = target.name
         else:
             # Final Fallback: Allow "Idling"
             self.discord.update(
@@ -217,6 +243,7 @@ class Tracker:
                 state="Waiting for activity...",
                 start=self.session_start_time
             )
+            self.discord_last_target_name = "Idling"
 
     # Legacy aliases
     def set_manual_activity(self, activity):

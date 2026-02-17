@@ -211,6 +211,39 @@ class StorageManager:
                     })
             
             stats.sort(key=lambda x: x['total_seconds'], reverse=True)
+            stats.sort(key=lambda x: x['total_seconds'], reverse=True)
+            return stats
+        finally:
+            session.close()
+
+    def get_daily_stats(self, target_date):
+        """Get stats for a specific date (date object)."""
+        session = self.get_session()
+        try:
+            # Range: target_date 00:00:00 to target_date 23:59:59
+            start_dt = datetime.combine(target_date, datetime.min.time())
+            end_dt = datetime.combine(target_date, datetime.max.time())
+            
+            activities = session.query(Activity).all()
+            stats = []
+            
+            for activity in activities:
+                # Sum logs that STARTED within the range
+                # Or cover the range? Simple approach: start_time in range.
+                total_seconds = sum(
+                    log.duration_seconds for log in activity.logs 
+                    if log.start_time >= start_dt and log.start_time <= end_dt and log.duration_seconds
+                )
+                
+                if total_seconds > 0:
+                    stats.append({
+                        "name": activity.name,
+                        "type": activity.type,
+                        "total_seconds": total_seconds,
+                        "icon_path": activity.icon_path
+                    })
+            
+            stats.sort(key=lambda x: x['total_seconds'], reverse=True)
             return stats
         finally:
             session.close()

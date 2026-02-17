@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, 
-                             QScrollArea, QPushButton, QLineEdit, QComboBox, QSizePolicy, QGridLayout, QLayout, QStackedWidget)
+                             QScrollArea, QPushButton, QLineEdit, QComboBox, QSizePolicy, QGridLayout, QLayout, QStackedWidget, QCheckBox)
 from PySide6.QtCore import Qt, QTimer, QSize, Signal
 from PySide6.QtGui import QFont, QPixmap, QIcon, QFontMetrics, QPainter, QColor, QPen
 from PySide6.QtWidgets import QMessageBox
@@ -15,8 +15,76 @@ from src.utils.text_utils import format_app_name
 
 class ActiveSessionCard(QFrame):
     stop_clicked = Signal()
-    stop_clicked = Signal()
+    discord_selected = Signal(bool) 
     
+    def __init__(self, name, status, is_auto, activity_obj, icon_manager, tracker=None, db=None, window_title=""):
+        super().__init__()
+        self.name = name
+        self.display_name = format_app_name(name)
+        # ... (rest of init)
+    
+    def set_live_style(self, is_live):
+        """Updates style if this is the active Discord activity."""
+        if is_live:
+            self.setStyleSheet("""
+                QFrame#ActiveSessionCard {
+                    background-color: #252526;
+                    border: 1px solid #2fa51f; /* Green Border */
+                    border-radius: 8px;
+                }
+                /* ... other styles ... */
+            """ + self._get_base_styles())
+            # Maybe show a "LIVE" label?
+            # Status Badge Logic
+            if hasattr(self, 'status_badge'):
+                # If Checked -> FORCED
+                # If Unchecked but Live (Auto) -> AUTO (or MANUAL if manual session)
+                # If Checked -> could be Auto or Forced.
+                # Check actual Pinned state
+                pinned = self.tracker.discord_pinned_activity
+                is_actually_pinned = False
+                if pinned:
+                     if hasattr(pinned, 'name') and pinned.name == self.name:
+                          is_actually_pinned = True
+                     elif hasattr(pinned, 'id') and hasattr(self.activity_obj, 'id') and pinned.id == self.activity_obj.id:
+                          is_actually_pinned = True
+                
+                if is_actually_pinned:
+                     self.status_badge.setText("FORCED")
+                     self.status_badge.setStyleSheet("background-color: #d32f2f; color: white; border-radius: 4px; padding: 4px 8px; font-weight: bold; font-size: 10px;")
+                else:
+                     self.status_badge.setText("AUTO" if self.is_auto else "MANUAL")
+                     color = "#007acc" if self.is_auto else "#a5861f"
+                     self.status_badge.setStyleSheet(f"background-color: {color}; color: white; border-radius: 4px; padding: 4px 8px; font-weight: bold; font-size: 10px;")
+        else:
+             # Revert
+             self.setStyleSheet("""
+                QFrame#ActiveSessionCard {
+                    background-color: #252526;
+                    border: 1px solid #3e3e3e;
+                    border-radius: 8px;
+                }
+             """ + self._get_base_styles())
+             if hasattr(self, 'status_badge'):
+                 self.status_badge.setText("AUTO" if self.is_auto else "MANUAL")
+                 color = "#007acc" if self.is_auto else "#a5861f"
+                 self.status_badge.setStyleSheet(f"background-color: {color}; color: white; border-radius: 4px; padding: 4px 8px; font-weight: bold; font-size: 10px;")
+
+    def _get_base_styles(self):
+        return """
+            QPushButton#StopButton {
+                background-color: transparent;
+                border: 1px solid #cc4444;
+                color: #ff6666;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton#StopButton:hover {
+                background-color: #cc4444;
+                color: white;
+            }
+        """
+
     def __init__(self, name, status, is_auto, activity_obj, icon_manager, tracker=None, db=None, window_title=""):
         super().__init__()
         self.name = name
@@ -29,25 +97,10 @@ class ActiveSessionCard(QFrame):
         self.is_auto = is_auto
         
         self.setObjectName("ActiveSessionCard")
-        # Ensure style is applied
-        self.setStyleSheet("""
-            QFrame#ActiveSessionCard {
-                background-color: #252526;
-                border: 1px solid #3e3e3e;
-                border-radius: 8px;
-            }
-            QPushButton#StopButton {
-                background-color: transparent;
-                border: 1px solid #cc4444;
-                color: #ff6666;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton#StopButton:hover {
-                background-color: #cc4444;
-                color: white;
-            }
-        """)
+        # Ensure style is applied init
+        self.set_live_style(False) 
+        
+        # ... (Rest of Init)
         # Dynamic Size - Smart Width
         # ... (Width calc seems same, maybe +30 for new button)
         
@@ -55,9 +108,9 @@ class ActiveSessionCard(QFrame):
         fm_name = QFontMetrics(QFont("Segoe UI", 11, QFont.Bold))
         name_width = fm_name.horizontalAdvance(self.display_name)
         
-        content_width = base_elements_width + name_width + 40
+        content_width = base_elements_width + name_width + 40 + 30 # +30 for Checkbox
         
-        MIN_WIDTH = 345 # Reduced back
+        MIN_WIDTH = 375 # Increased for Checkbox
         MAX_WIDTH = MIN_WIDTH + 100 
         
         final_width = max(MIN_WIDTH, min(content_width, MAX_WIDTH))
@@ -70,7 +123,39 @@ class ActiveSessionCard(QFrame):
         layout.setContentsMargins(15, 10, 15, 10) 
         layout.setSpacing(12)
         
-
+        # 0. Discord Checkbox (New)
+        self.discord_chk = QCheckBox()
+        self.discord_chk.setCursor(Qt.PointingHandCursor)
+        self.discord_chk.setToolTip("Force Pin to Discord")
+        self.discord_chk.setFixedSize(28, 28) # Ensure it has size
+        self.discord_chk.setStyleSheet("""
+            QCheckBox::indicator {
+                width: 24px;
+                height: 24px;
+                border-radius: 12px;
+                subcontrol-position: center;
+            }
+            QCheckBox::indicator:unchecked {
+                background-color: #2f3136; /* Discord Dark */
+                border: 2px solid #555;
+                image: none;
+            }
+            QCheckBox::indicator:unchecked:hover {
+                border-color: #7289da;
+            }
+            QCheckBox::indicator:checked {
+                border: none;
+                background-color: transparent;
+                image: url(src/icons/discord_icon.png);
+            }
+        """)
+        # If we don't have the white icon easily, just use color. "checkbox for active activities" - standard check is fine.
+        # User said "checkbox with discord icon"... I'll try to find if I can reuse styling or just keep simple check.
+        # "remove the checkbox with discord icon... add checkbox" - imply standard check?
+        # "when i choose it it should not change... otherwise auto"
+        
+        self.discord_chk.clicked.connect(self.discord_selected)
+        layout.addWidget(self.discord_chk)
         
         # 1. Icon (Left)
         self.icon_lbl = QLabel()
@@ -292,16 +377,6 @@ class ActiveSessionCard(QFrame):
              dm, _ = divmod(dr, 60)
              
              self.desc_stats_lbl.setText(f"Title used {count} times • {int(dh)}h {int(dm)}m")
-    def update_stats(self, current_sec, today_sec, total_sec):
-        # Timer
-        h, r = divmod(current_sec, 3600)
-        m, s = divmod(r, 60)
-        self.timer_lbl.setText(f"{h:02}:{m:02}:{s:02}")
-        
-        # Stats
-        h1, m1 = divmod(today_sec // 60, 60)
-        h2, m2 = divmod(total_sec // 60, 60)
-        self.stats_lbl.setText(f"Today: {int(h1)}h {int(m1)}m  •  Total: {int(h2)}h {int(m2)}m")
 
     def prompt_description(self, event=None):
         if not self.db or not self.activity_obj: return
@@ -577,7 +652,9 @@ class HomeWidget(QWidget):
                  # Warning: active_cards key is sid="AUTO_Chrome".
                  # If we pin, we want to pin the activity object.
                  # access current?
-
+                 current_act = self.tracker.current_activity
+                 if current_act and current_act.name == name:
+                      card.discord_selected.connect(lambda checked, a=current_act: self.tracker.set_discord_pin(a if checked else None))
                  
                  self.active_layout.addWidget(card)
                  self.active_cards[sid] = card
@@ -585,9 +662,33 @@ class HomeWidget(QWidget):
                  # Update description dynamically if changed
                  if self.active_cards[sid].window_title != desc:
                      self.active_cards[sid].update_description(desc)
-                     
-             # Update Discord Checkbox State
 
+             # Check if App is Enabled for Discord
+             # Need to fetch fresh activity object or check DB
+             # current_activity might be stale regarding discord_visible?
+             # tracker updates it.
+             is_visible = True
+             if self.tracker.current_activity:
+                 # Check DB for fresh state
+                 act = self.db.get_activity_by_id(self.tracker.current_activity.id)
+                 if act: is_visible = act.discord_visible
+             
+             # Also check Global Setting
+             is_global_enabled = self.tracker.storage.get_setting("discord_enabled", "True") == "True"
+             
+             should_show_checkbox = is_visible and is_global_enabled
+             self.active_cards[sid].discord_chk.setVisible(should_show_checkbox)
+
+             # Update Live Status & Checkbox
+             # User wants Checkbox to reflect ACTIVE status
+             actual_target = getattr(self.tracker, 'discord_last_target_name', None)
+             is_live_now = (actual_target == name)
+             
+             self.active_cards[sid].discord_chk.blockSignals(True)
+             self.active_cards[sid].discord_chk.setChecked(is_live_now)
+             self.active_cards[sid].discord_chk.blockSignals(False)
+             
+             self.active_cards[sid].set_live_style(is_live_now)
 
              # Update Data
              duration = 0
@@ -616,28 +717,46 @@ class HomeWidget(QWidget):
                      card = ActiveSessionCard(act.name, "MANUAL", False, act, self.icon_manager, self.tracker, self.db, window_title="")
                      card.stop_clicked.connect(lambda a=act: self.tracker.stop_manual_session(a))
                      
-
+                     # Connect Discord Checkbox
+                     card.discord_selected.connect(lambda checked, a=act: self.tracker.set_discord_pin(a if checked else None))
+                     
                      
                      self.active_layout.addWidget(card)
                      self.active_cards[sid] = card
+                 
+             # Check Visibility
+             is_visible = getattr(act, 'discord_visible', True)
+             # Also check Global Setting
+             is_global_enabled = self.tracker.storage.get_setting("discord_enabled", "True") == "True"
+             
+             should_show_checkbox = is_visible and is_global_enabled
+             self.active_cards[sid].discord_chk.setVisible(should_show_checkbox)
+                 
+             # Update Live Status & Checkbox
+             actual_target = getattr(self.tracker, 'discord_last_target_name', None)
+             is_live_now = (actual_target == act.name)
+             
+             self.active_cards[sid].discord_chk.blockSignals(True)
+             self.active_cards[sid].discord_chk.setChecked(is_live_now)
+             self.active_cards[sid].discord_chk.blockSignals(False)
+             
+             self.active_cards[sid].set_live_style(is_live_now)
+
                      
-                 # Update Discord Checkbox State
-
-
-                 # Update Data
-                 duration = 0
-                 session = self.db.get_session()
-                 try:
-                     from src.database.models import ActivityLog
-                     log = session.query(ActivityLog).get(log_id)
-                     if log: duration = int(time.time() - log.start_time.timestamp())
-                 except: pass
-                 finally: session.close()
+             # Update Data
+             duration = 0
+             session = self.db.get_session()
+             try:
+                 from src.database.models import ActivityLog
+                 log = session.query(ActivityLog).get(log_id)
+                 if log: duration = int(time.time() - log.start_time.timestamp())
+             except: pass
+             finally: session.close()
                  
-                 today = self.db.get_today_duration(act.name, act.type)
-                 total = self.db.get_activity_duration(act.name, act.type)
-                 
-                 self.active_cards[sid].update_stats(duration, today, total)
+             today = self.db.get_today_duration(act.name, act.type)
+             total = self.db.get_activity_duration(act.name, act.type)
+             
+             self.active_cards[sid].update_stats(duration, today, total)
 
         # Remove stale cards
         for sid in list(self.active_cards.keys()):
