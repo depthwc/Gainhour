@@ -30,7 +30,7 @@ def main():
     
     # Check for Daily Logs Only Setting (Cleanup on startup)
     if db.get_setting("daily_logs_only") == "True":
-        db.cleanup_old_description_logs()
+        db.cleanup_old_description_logs()   
     
     # Main Window (It initializes its own Tracker/Storage internally)
     window = MainWindow()

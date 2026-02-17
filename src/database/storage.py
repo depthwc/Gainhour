@@ -477,3 +477,37 @@ class StorageManager:
             session.rollback()
         finally:
             session.close()
+
+    def get_daily_activity_breakdown(self):
+        """
+        Returns { date_obj: { activity_name: total_seconds } }
+        Aggregates duration per activity per day.
+        """
+        session = self.get_session()
+        try:
+            # Group by Date and Activity
+            # SQLite returns date string 'YYYY-MM-DD'
+            data = session.query(
+                func.date(ActivityLog.start_time),
+                Activity.name,
+                func.sum(ActivityLog.duration_seconds)
+            ).join(Activity).group_by(func.date(ActivityLog.start_time), Activity.name).all()
+            
+            result = {}
+            for day_str, act_name, duration in data:
+                if not day_str or not duration: 
+                    continue
+                
+                try:
+                    day = datetime.strptime(day_str, "%Y-%m-%d").date()
+                except ValueError:
+                    continue # Skip invalid dates
+                    
+                if day not in result:
+                    result[day] = {}
+                # Handle potentially None duration (though we filtered)
+                result[day][act_name] = duration
+                
+            return result
+        finally:
+            session.close()

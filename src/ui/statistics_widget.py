@@ -11,8 +11,226 @@ from src.utils.text_utils import format_app_name
 matplotlib.use('QtAgg')
 
 class ScrollableCanvas(FigureCanvas):
+    def __init__(self, figure, scroll_area=None):
+        super().__init__(figure)
+        self.scroll_area = scroll_area
+
     def wheelEvent(self, event):
-        event.ignore()
+        if self.scroll_area:
+            delta = event.angleDelta().y()
+            if delta != 0:
+                scrollbar = self.scroll_area.horizontalScrollBar()
+                scrollbar.setValue(scrollbar.value() - delta)
+                event.accept()
+                return
+        if self.scroll_area:
+            delta = event.angleDelta().y()
+            if delta != 0:
+                scrollbar = self.scroll_area.horizontalScrollBar()
+                scrollbar.setValue(scrollbar.value() - delta)
+                event.accept()
+                return
+        super().wheelEvent(event)
+
+class LifetimeStackedChart(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet("background: transparent; border: none;")
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0,0,0,0)
+        
+        self.chart_scroll = QScrollArea()
+        self.chart_scroll.setWidgetResizable(True)
+        self.chart_scroll.setFrameShape(QFrame.NoFrame)
+        self.chart_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.chart_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.chart_scroll.setStyleSheet("""
+            QScrollArea { background: transparent; }
+            QScrollBar:horizontal {
+                height: 8px;
+                background: #2b2b2b;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #444;
+                border-radius: 4px;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                background: none;
+            }
+        """)
+        self.chart_scroll.setFixedHeight(300)
+        
+        self.chart_container = QWidget()
+        self.chart_container.setStyleSheet("background: transparent;")
+        self.chart_layout = QHBoxLayout(self.chart_container)
+        self.chart_layout.setContentsMargins(0,0,0,0)
+        self.chart_layout.setAlignment(Qt.AlignLeft)
+        
+        self.figure, self.ax = plt.subplots(figsize=(5, 3.5), dpi=90)
+        self.figure.patch.set_facecolor('#252526')
+        self.canvas = ScrollableCanvas(self.figure, self.chart_scroll)
+        self.canvas.setStyleSheet("background-color: transparent;")
+        
+        self.chart_layout.addWidget(self.canvas)
+        self.chart_scroll.setWidget(self.chart_container)
+        self.chart_layout.addWidget(self.canvas)
+        self.chart_scroll.setWidget(self.chart_container)
+        self.layout.addWidget(self.chart_scroll)
+        
+        # List Area
+        self.list_scroll = QScrollArea()
+        self.list_scroll.setWidgetResizable(True)
+        self.list_scroll.setFrameShape(QFrame.NoFrame)
+        self.list_scroll.setStyleSheet("background: transparent; border: none;")
+        
+        self.list_container = QWidget()
+        self.list_layout = QVBoxLayout(self.list_container)
+        self.list_layout.setAlignment(Qt.AlignTop)
+        self.list_layout.setSpacing(5)
+        self.list_layout.setContentsMargins(0,0,0,0)
+        
+        self.list_scroll.setWidget(self.list_container)
+        self.layout.addWidget(self.list_scroll)
+
+    def update_data(self, daily_breakdown):
+        self.ax.clear()
+        self.ax.set_facecolor('#252526')
+        
+        if not daily_breakdown:
+            self.ax.text(0.5, 0.5, "No Data", color='#666', ha='center', va='center')
+            self.canvas.draw()
+            return
+            
+        # Sort dates
+        sorted_dates = sorted(daily_breakdown.keys())
+        date_labels = [d.strftime("%b %d, %Y") for d in sorted_dates]
+        
+        # Get all unique activities
+        all_activities = set()
+        for d in daily_breakdown:
+            all_activities.update(daily_breakdown[d].keys())
+        sorted_activities = sorted(list(all_activities))
+        
+        # Prepare data for stacking
+        # x = indices
+        x = range(len(sorted_dates))
+        bottoms = [0] * len(sorted_dates)
+        
+        colors = [
+            '#5865F2', '#EB459E', '#F7B731', '#20BF6B', '#A55EEA', '#45AAF2', '#778CA3', 
+            '#FF6B6B', '#48DBFB', '#1DD1A1', '#FF9F43', '#54A0FF', '#5F27CD', '#C8D6E5', 
+            '#576574', '#0ABDE3', '#EE5253', '#10AC84', '#2E86DE', '#341F97', '#8395A7', '#FFC312'
+        ]
+        
+        # Calculate total duration for each activity to sort them
+        activity_totals = {}
+        for act in sorted_activities:
+             total = sum(daily_breakdown[d].get(act, 0) for d in sorted_dates)
+             activity_totals[act] = total
+             
+        # Sort activities by total duration (descending) so biggest stacks are consistently colored/ordered
+        sorted_activities.sort(key=lambda a: activity_totals[a], reverse=True)
+
+        # We will only put the top 10 in the legend to avoid clutter
+        top_activities = set(sorted_activities[:10])
+        
+        handles = []
+        labels = []
+        
+        for i, activity in enumerate(sorted_activities):
+            color = colors[i % len(colors)]
+            values = []
+            for d in sorted_dates:
+                # Convert to hours
+                seconds = daily_breakdown[d].get(activity, 0)
+                values.append(seconds / 3600)
+            
+            bar = self.ax.bar(x, values, bottom=bottoms, color=color, width=0.6, linewidth=0)
+            
+            # Record handle for legend if in top 10
+            if activity in top_activities:
+                handles.append(bar)
+                labels.append(format_app_name(activity))
+            
+            # Update bottoms
+            for j in range(len(bottoms)):
+                bottoms[j] += values[j]
+        
+        self.ax.set_xticks(x)
+        self.ax.set_xticklabels(date_labels, rotation=45, ha='right', color='#aaaaaa', fontsize=8)
+        # Horizontal labels, centered
+        self.ax.set_xticklabels(date_labels, rotation=0, ha='center', color='#aaaaaa', fontsize=8)
+        self.ax.tick_params(axis='y', colors='#aaaaaa', labelsize=8)
+        self.ax.set_ylabel("Hours", color='#aaaaaa', fontsize=9)
+        
+        # Styling
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['left'].set_color('#444')
+        self.ax.spines['bottom'].set_color('#444')
+        self.ax.grid(axis='y', linestyle='--', alpha=0.3, color='#444')
+        
+        # Dynamic Width
+        # Increase width significantly to fit "Feb 17, 2026" horizontally without overlap
+        # Estimate ~80-100px per label?
+        width_inch = max(6, len(sorted_dates) * 1.2) 
+        self.figure.set_size_inches(width_inch, 3.5)
+        self.canvas.setFixedWidth(int(width_inch * 90))
+        
+        self.figure.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.15)
+        
+        self.canvas.draw()
+        
+        # Update List
+        self._fill_list(sorted_activities, activity_totals, colors)
+
+    def _fill_list(self, sorted_activities, activity_totals, colors):
+        for i in reversed(range(self.list_layout.count())): 
+            item = self.list_layout.itemAt(i)
+            if item.widget(): item.widget().setParent(None)
+            
+        for i, activity in enumerate(sorted_activities):
+             color = colors[i % len(colors)]
+             total_seconds = activity_totals[activity]
+             
+             row = QFrame()
+             row.setStyleSheet("""
+                QFrame {
+                    background-color: #2b2b2b;
+                    border-radius: 6px;
+                }
+                QFrame:hover {
+                    background-color: #333333;
+                }
+             """)
+             row.setFixedHeight(35) 
+             
+             row_layout = QHBoxLayout(row)
+             row_layout.setContentsMargins(10, 0, 10, 0)
+             
+             color_box = QFrame()
+             color_box.setFixedSize(10, 10)
+             color_box.setStyleSheet(f"background-color: {color}; border-radius: 5px;")
+             row_layout.addWidget(color_box)
+             
+             name_lbl = QLabel(format_app_name(activity))
+             name_lbl.setFont(QFont("Segoe UI", 9, QFont.Bold)) 
+             name_lbl.setStyleSheet("color: white; background: transparent; border: none;")
+             row_layout.addWidget(name_lbl)
+             
+             row_layout.addStretch()
+             
+             m, sec = divmod(total_seconds, 60)
+             h, m = divmod(m, 60)
+             time_str = f"{int(h)}h {int(m)}m"
+             
+             time_lbl = QLabel(time_str)
+             time_lbl.setFont(QFont("Segoe UI", 9))
+             time_lbl.setStyleSheet("color: #cccccc; background: transparent; border: none;")
+             row_layout.addWidget(time_lbl)
+             
+             self.list_layout.addWidget(row)
 
 class StatsPanel(QFrame):
     """Reusable panel for displaying a Chart + List."""
@@ -56,7 +274,7 @@ class StatsPanel(QFrame):
         
         self.figure, self.ax = plt.subplots(figsize=(5, 2.8), dpi=90) 
         self.figure.patch.set_facecolor('#252526')
-        self.canvas = ScrollableCanvas(self.figure)
+        self.canvas = ScrollableCanvas(self.figure, self.chart_scroll)
         self.canvas.setStyleSheet("background-color: transparent;")
         
         self.chart_layout.addWidget(self.canvas)
@@ -110,7 +328,11 @@ class StatsPanel(QFrame):
              values = [s['total_seconds'] for s in chart_stats]
              unit = "Seconds"
 
-        colors = ['#5865F2', '#EB459E', '#F7B731', '#20BF6B', '#A55EEA', '#45AAF2', '#778CA3']
+        colors = [
+            '#5865F2', '#EB459E', '#F7B731', '#20BF6B', '#A55EEA', '#45AAF2', '#778CA3', 
+            '#FF6B6B', '#48DBFB', '#1DD1A1', '#FF9F43', '#54A0FF', '#5F27CD', '#C8D6E5', 
+            '#576574', '#0ABDE3', '#EE5253', '#10AC84', '#2E86DE', '#341F97', '#8395A7', '#FFC312'
+        ]
         bar_colors = [colors[i % len(colors)] for i in range(len(values))]
         
         bars = self.ax.bar(range(len(values)), values, color=bar_colors, width=0.7)
@@ -186,14 +408,20 @@ class StatsPanel(QFrame):
 
 
 class StatisticsWidget(QWidget):
-    def __init__(self, db):
+    def __init__(self, db, tracker=None):
         super().__init__()
         self.db = db
+        self.tracker = tracker
         self.current_date = date.today()
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
         self.layout.setSpacing(15)
+        
+        # ... (Layout setup remains same until timer) ... Since I can't easily skip lines in replace_file_content without context matching, 
+        # I will target the __init__ signature and the Timer block separately if possible, or just the whole file if I have to.
+        # But here I am replacing the whole class or large chunks.
+        # Let's try to do it in chunks.
         
         # === 1. TOP ROW (Left + Right Columns) ===
         self.top_row_widget = QWidget()
@@ -288,15 +516,16 @@ class StatisticsWidget(QWidget):
         
         self.left_layout.addWidget(self.main_box)
         
-        # --- B. Right Column (Placeholder) ---
+        # --- B. Right Column (Lifetime Stacked) ---
         self.right_col = QWidget()
         self.right_layout = QVBoxLayout(self.right_col)
         self.right_layout.setContentsMargins(0, 0, 0, 0)
         self.right_layout.setSpacing(10)
         
-        header_spacer = QWidget()
-        header_spacer.setFixedSize(10, 35) 
-        self.right_layout.addWidget(header_spacer)
+        self.stacked_header = QLabel("Daily Breakdown (Lifetime)")
+        self.stacked_header.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        self.stacked_header.setStyleSheet("color: white;")
+        self.right_layout.addWidget(self.stacked_header)
 
         self.right_box = QFrame()
         self.right_box.setStyleSheet("""
@@ -304,6 +533,12 @@ class StatisticsWidget(QWidget):
             border-radius: 10px; 
             border: 1px solid #3e3e3e;
         """)
+        self.right_box_layout = QVBoxLayout(self.right_box)
+        self.right_box_layout.setContentsMargins(10,10,10,10)
+        
+        self.lifetime_chart = LifetimeStackedChart()
+        self.right_box_layout.addWidget(self.lifetime_chart)
+        
         self.right_layout.addWidget(self.right_box)
         
         self.top_row_layout.addWidget(self.left_col, stretch=1)
@@ -321,10 +556,10 @@ class StatisticsWidget(QWidget):
         self.bottom_box.setFixedHeight(400) 
         self.layout.addWidget(self.bottom_box)
         
-        # Auto-refresh timer (every 1 minute)
+        # Auto-refresh timer (every 1 second for live stats)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(60000) 
+        self.timer.start(1000) 
 
         self.refresh()
         
@@ -416,6 +651,39 @@ class StatisticsWidget(QWidget):
              
         if self.current_date == date.today():
              stats = self.db.get_today_stats()
+             
+             # MERGE LIVE DATA FROM TRACKER
+             if self.tracker:
+                 import time
+                 current_time = time.time()
+                 
+                 # Helper to add/update stats list
+                 def add_to_stats(name, duration):
+                     for s in stats:
+                         if s['name'] == name:
+                             s['total_seconds'] += duration
+                             return
+                     stats.append({'name': name, 'total_seconds': duration})
+
+                 # 1. Auto-Tracker
+                 if self.tracker.current_activity and self.tracker.start_time:
+                     duration = current_time - self.tracker.start_time
+                     if duration > 0:
+                         add_to_stats(self.tracker.current_activity.name, duration)
+                         
+                 # 2. Manual Sessions
+                 # Use manual_activities if available, else skip to avoid crash
+                 if hasattr(self.tracker, 'manual_activities') and hasattr(self.tracker, 'manual_start_times'):
+                     for aid, activity in self.tracker.manual_activities.items():
+                         start_t = self.tracker.manual_start_times.get(aid)
+                         if start_t:
+                             duration = current_time - start_t
+                             if duration > 0:
+                                 add_to_stats(activity.name, duration)
+             
+             # Re-sort after merging
+             stats.sort(key=lambda x: x['total_seconds'], reverse=True)
+             
         else:
              stats = self.db.get_daily_stats(self.current_date)
         
@@ -424,5 +692,69 @@ class StatisticsWidget(QWidget):
 
     def refresh_total(self):
         stats = self.db.get_activity_stats()
+        # For total, we could also merge live data, but 'today' is most important for "Live" feel.
+        # Let's merge it for consistency if we are looking at total.
+        
+        if self.tracker:
+             import time
+             current_time = time.time()
+             
+             def add_to_stats(name, duration):
+                 for s in stats:
+                     if s['name'] == name:
+                         s['total_seconds'] += duration
+                         return
+                 stats.append({'name': name, 'total_seconds': duration})
+
+             if self.tracker.current_activity and self.tracker.start_time:
+                 duration = current_time - self.tracker.start_time
+                 if duration > 0:
+                     add_to_stats(self.tracker.current_activity.name, duration)
+                     
+             if hasattr(self.tracker, 'manual_activities') and hasattr(self.tracker, 'manual_start_times'):
+                 for aid, activity in self.tracker.manual_activities.items():
+                     start_t = self.tracker.manual_start_times.get(aid)
+                     if start_t:
+                         duration = current_time - start_t
+                         if duration > 0:
+                             add_to_stats(activity.name, duration)
+                             
+             stats.sort(key=lambda x: x['total_seconds'], reverse=True)
+
         self.lifetime_total_lbl.setText(self._calculate_total_str(stats))
         self.total_panel.update_data(stats)
+        
+        # Update Stacked Chart
+        daily_breakdown = self.db.get_daily_activity_breakdown()
+        # We can optionally merge live data here too if we want "Today" column to be live in the stacked chart
+        # But let's keep it simple for now, or just add it to today's entry
+        
+        if self.tracker:
+            import time
+            from datetime import date
+            today = date.today()
+            current_time = time.time()
+            
+            if today not in daily_breakdown:
+                daily_breakdown[today] = {}
+            
+            def add_to_breakdown(name, duration):
+                if name in daily_breakdown[today]:
+                    daily_breakdown[today][name] += duration
+                else:
+                    daily_breakdown[today][name] = duration
+
+            if self.tracker.current_activity and self.tracker.start_time:
+                 duration = current_time - self.tracker.start_time
+                 if duration > 0:
+                     add_to_breakdown(self.tracker.current_activity.name, duration)
+            
+            if hasattr(self.tracker, 'manual_activities') and hasattr(self.tracker, 'manual_start_times'):
+                 for aid, activity in self.tracker.manual_activities.items():
+                     start_t = self.tracker.manual_start_times.get(aid)
+                     if start_t:
+                         duration = current_time - start_t
+                         if duration > 0:
+                             add_to_breakdown(activity.name, duration)
+
+        self.lifetime_chart.update_data(daily_breakdown)

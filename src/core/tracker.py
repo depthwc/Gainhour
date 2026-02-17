@@ -26,7 +26,9 @@ class Tracker:
         
         # Manual/Concurrent Tracking State
         self.manual_sessions = {} 
+        self.manual_activities = {} # Store Activity objects for easy access
         self.manual_desc_sessions = {}
+        self.manual_start_times = {}
  
         
         # Suppression State
@@ -36,8 +38,7 @@ class Tracker:
         self.discord = DiscordRPC(client_id="1469935146579918868")
         self.discord_pinned_activity = None
         self.discord_last_target_name = None
-
-        
+    
     def start(self):
         self.is_running = True
         self.discord.connect()
@@ -73,6 +74,10 @@ class Tracker:
         # Stop all manuals
         for log_id in self.manual_sessions.values():
             self.storage.stop_logging(log_id)
+        self.manual_sessions.clear()
+        self.manual_start_times.clear()
+        self.manual_activities.clear()
+        
         if self.discord.connected:
             self.discord.clear()
             self.discord.close()
@@ -92,6 +97,8 @@ class Tracker:
             
         log_id = self.storage.start_logging(activity.id)
         self.manual_sessions[activity.id] = log_id
+        self.manual_start_times[activity.id] = time.time()
+        self.manual_activities[activity.id] = activity
         
         # Start description logging for manual session
         desc = activity.description if activity.description else "Manual Session"
@@ -103,6 +110,12 @@ class Tracker:
         if activity.id in self.manual_sessions:
             log_id = self.manual_sessions.pop(activity.id)
             self.storage.stop_logging(log_id)
+            
+            if activity.id in self.manual_start_times:
+                self.manual_start_times.pop(activity.id)
+            
+            if activity.id in self.manual_activities:
+                self.manual_activities.pop(activity.id)
             
             if activity.id in self.manual_desc_sessions:
                 desc_id = self.manual_desc_sessions.pop(activity.id)
