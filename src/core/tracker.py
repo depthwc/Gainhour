@@ -46,6 +46,16 @@ class Tracker:
         self.thread.daemon = True
         self.thread.start()
 
+    def reconnect_discord(self):
+        """Manually reconnect to Discord RPC if connection was lost."""
+        if self.discord.connected:
+            self.discord.clear()
+            self.discord.close()
+        
+        self.discord.connected = False
+        self.discord.connect()
+        self._update_discord()
+
     def _resolve_icon_path(self, process_name, executable_path):
         if not self.icon_manager or not executable_path:
             return executable_path # Fallback to exe path if no manager (though storage expects png)

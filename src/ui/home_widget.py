@@ -478,7 +478,34 @@ class HomeWidget(QWidget):
         lbl = QLabel("Active Sessions")
         lbl.setFont(QFont("Segoe UI", 16, QFont.Bold))
         lbl.setStyleSheet("color: white;")
-        main_v_layout.addWidget(lbl)
+        
+        # 1b. Reconnect Discord Button (Top Right)
+        self.reconnect_btn = QPushButton("Reconnect to Discord")
+        self.reconnect_btn.setCursor(Qt.PointingHandCursor)
+        self.reconnect_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5865F2; /* Discord Color */
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #4752C4;
+            }
+        """)
+        self.reconnect_btn.clicked.connect(self.tracker.reconnect_discord)
+        # Hide initially, updated in update_data
+        self.reconnect_btn.setVisible(False)
+        
+        header_top_layout = QHBoxLayout()
+        header_top_layout.addWidget(lbl)
+        header_top_layout.addStretch()
+        header_top_layout.addWidget(self.reconnect_btn)
+        
+        main_v_layout.addLayout(header_top_layout)
         
         # 2. Content Row (Scroll Area + Total Card)
         content_h_layout = QHBoxLayout()
@@ -595,6 +622,10 @@ class HomeWidget(QWidget):
         layout.addWidget(add_btn)
 
     def update_data(self):
+        # 0. Update Reconnect Button Visibility
+        is_discord_enabled = self.tracker.storage.get_setting("discord_enabled", "True") == "True"
+        self.reconnect_btn.setVisible(is_discord_enabled)
+        
         # 1. Update Active Sessions UI
         self.update_active_sessions()
         

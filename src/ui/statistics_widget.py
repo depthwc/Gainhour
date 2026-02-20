@@ -3,10 +3,14 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont, QColor, QIcon
 from datetime import date, timedelta
+from typing import Dict, List, Tuple
+import json
+import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib
 from src.utils.text_utils import format_app_name
+from src.ui.checkable_combobox import CheckableComboBox
 
 matplotlib.use('QtAgg')
 
@@ -17,17 +21,16 @@ class ScrollableCanvas(FigureCanvas):
 
     def wheelEvent(self, event):
         if self.scroll_area:
-            delta = event.angleDelta().y()
-            if delta != 0:
-                scrollbar = self.scroll_area.horizontalScrollBar()
-                scrollbar.setValue(scrollbar.value() - delta)
+            delta_y = event.angleDelta().y()
+            delta_x = event.angleDelta().x()
+            
+            scrollbar = self.scroll_area.horizontalScrollBar()
+            if abs(delta_x) > abs(delta_y):
+                scrollbar.setValue(scrollbar.value() - delta_x)
                 event.accept()
                 return
-        if self.scroll_area:
-            delta = event.angleDelta().y()
-            if delta != 0:
-                scrollbar = self.scroll_area.horizontalScrollBar()
-                scrollbar.setValue(scrollbar.value() - delta)
+            elif delta_y != 0:
+                scrollbar.setValue(scrollbar.value() - delta_y)
                 event.accept()
                 return
         super().wheelEvent(event)
@@ -407,6 +410,127 @@ class StatsPanel(QFrame):
              self.list_layout.addWidget(row)
 
 
+class ClusteredColumnChart(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet("background: transparent; border: none;")
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0,0,0,0)
+        
+        self.chart_scroll = QScrollArea()
+        self.chart_scroll.setWidgetResizable(True)
+        self.chart_scroll.setFrameShape(QFrame.NoFrame)
+        self.chart_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.chart_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.chart_scroll.setStyleSheet("""
+            QScrollArea { background: transparent; }
+            QScrollBar:horizontal { height: 8px; background: #2b2b2b; border-radius: 4px; }
+            QScrollBar::handle:horizontal { background: #444; border-radius: 4px; }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { background: none; }
+        """)
+        self.chart_scroll.setFixedHeight(300)
+        
+        self.chart_container = QWidget()
+        self.chart_container.setStyleSheet("background: transparent;")
+        self.chart_layout = QHBoxLayout(self.chart_container)
+        self.chart_layout.setContentsMargins(0,0,0,0)
+        self.chart_layout.setAlignment(Qt.AlignLeft)
+        
+        self.figure, self.ax = plt.subplots(figsize=(5, 3.5), dpi=90)
+        self.figure.patch.set_facecolor('#252526')
+        self.canvas = ScrollableCanvas(self.figure, self.chart_scroll)
+        self.canvas.setStyleSheet("background-color: transparent;")
+        
+        self.chart_layout.addWidget(self.canvas)
+        self.chart_scroll.setWidget(self.chart_container)
+        self.layout.addWidget(self.chart_scroll)
+
+    def update_data(self, daily_breakdown, groups, group_colors):
+        self.ax.clear()
+        self.ax.set_facecolor('#252526')
+        
+        if not daily_breakdown or not any(groups):
+            self.ax.text(0.5, 0.5, "No Data or Groups Selected", color='#666', ha='center', va='center')
+            self.canvas.draw()
+            return
+            
+        sorted_dates = sorted(daily_breakdown.keys())
+        date_labels = [d.strftime("%b %d") for d in sorted_dates]
+        
+        x = range(len(sorted_dates))
+        n_groups = len(groups)
+        bar_width = 0.8 / n_groups if n_groups > 0 else 0.8
+        
+        max_val = 0
+        # Calculate total max in seconds to determine unit
+        for i, group in enumerate(groups):
+            if group:
+                for d in sorted_dates:
+                    day_data = daily_breakdown.get(d, {})
+                    day_sum = sum(day_data.get(app, 0) for app in group)
+                    max_val = max(max_val, day_sum)
+                    
+        if max_val > 3600:
+            unit_div = 3600
+            unit_label = "Hours"
+        elif max_val > 60:
+            unit_div = 60
+            unit_label = "Minutes"
+        else:
+            unit_div = 1
+            unit_label = "Seconds"
+
+        max_plot_val = 0
+        
+        for i, group in enumerate(groups):
+            if not group:
+                values = [0] * len(sorted_dates)
+            else:
+                values = []
+                for d in sorted_dates:
+                    day_data = daily_breakdown.get(d, {})
+                    day_sum = sum(day_data.get(app, 0) for app in group)
+                    values.append(day_sum / unit_div) 
+            
+            if values:
+                max_plot_val = max(max_plot_val, max(values))
+            
+            offset = (i - n_groups / 2.0 + 0.5) * bar_width if n_groups > 0 else 0
+            x_pos = [pos + offset for pos in x]
+            
+            self.ax.bar(x_pos, values, width=bar_width, color=group_colors[i], linewidth=0)
+            
+        self.ax.set_xticks(list(x))
+        self.ax.set_xticklabels(date_labels, rotation=0, ha='center', color='#aaaaaa', fontsize=8)
+        self.ax.tick_params(axis='y', colors='#aaaaaa', labelsize=8)
+        self.ax.set_ylabel(unit_label, color='#aaaaaa', fontsize=9)
+        
+        self.ax.spines['top'].set_visible(False)
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['left'].set_color('#444')
+        self.ax.spines['bottom'].set_color('#444')
+        self.ax.grid(axis='y', linestyle='--', alpha=0.3, color='#444')
+        
+        width_inch = max(6, len(sorted_dates) * max(1.2, bar_width * n_groups * 1.5))
+        pixel_width = int(width_inch * 90)
+        self.figure.set_size_inches(width_inch, 3.5)
+        self.canvas.setFixedWidth(pixel_width)
+        self.chart_container.setMinimumWidth(pixel_width)
+        
+        max_y = max_plot_val * 1.1 if max_plot_val > 0 else 1
+        self.ax.set_ylim(0, max_y)
+        
+        # Save horizontal scrollbar position
+        scrollbar = self.chart_scroll.horizontalScrollBar()
+        scroll_val = scrollbar.value()
+        
+        self.figure.subplots_adjust(left=0.08, right=0.95, top=0.9, bottom=0.15)
+        self.canvas.draw()
+        
+        # Restore scrollbar position after drawing
+        # Use QTimer to ensure layout has updated before setting scroll
+        QTimer.singleShot(0, lambda: scrollbar.setValue(scroll_val))
+
 class StatisticsWidget(QWidget):
     def __init__(self, db, tracker=None):
         super().__init__()
@@ -553,7 +677,55 @@ class StatisticsWidget(QWidget):
             border-radius: 10px; 
             border: 1px solid #3e3e3e;
         """)
-        self.bottom_box.setFixedHeight(400) 
+        # We let it expand naturally instead of fixing height
+        self.bottom_box_layout = QVBoxLayout(self.bottom_box)
+        self.bottom_box_layout.setContentsMargins(15, 15, 15, 15)
+        self.bottom_box_layout.setSpacing(10)
+        
+        bottom_header_label = QLabel("Compare Apps")
+        bottom_header_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        bottom_header_label.setStyleSheet("color: white;")
+        self.bottom_box_layout.addWidget(bottom_header_label)
+
+        self.groups_layout = QHBoxLayout()
+        self.groups_layout.setSpacing(20)
+        self.groups_layout.setAlignment(Qt.AlignLeft)
+        self.group_combos = []
+        self.group_colors = ['#FF6B6B', '#1DD1A1', '#54A0FF'] # Red, Green, Blue
+        
+        # Load cached selections
+        self.cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'chart_cache.json')
+        self.cached_selections = [[], [], []]
+        try:
+            if os.path.exists(self.cache_file):
+                with open(self.cache_file, 'r') as f:
+                    self.cached_selections = json.load(f)
+        except Exception as e:
+            print(f"Failed to load chart cache: {e}")
+        
+        for i in range(3):
+            bg_layout = QHBoxLayout()
+            color_box = QFrame()
+            color_box.setFixedSize(12, 12)
+            color_box.setStyleSheet(f"background-color: {self.group_colors[i]}; border-radius: 6px;")
+            combo = CheckableComboBox()
+            combo.setFixedWidth(200)
+            
+            # Identify the combo logic to save to cache when selection changes
+            combo.setProperty("group_index", i)
+            combo.selectionChanged.connect(self._on_combo_selection_changed)
+            
+            bg_layout.addWidget(color_box)
+            bg_layout.addWidget(combo)
+            self.groups_layout.addLayout(bg_layout)
+            self.group_combos.append(combo)
+            
+        self.groups_layout.addStretch()
+        self.bottom_box_layout.addLayout(self.groups_layout)
+        
+        self.clustered_chart = ClusteredColumnChart()
+        self.bottom_box_layout.addWidget(self.clustered_chart)
+        
         self.layout.addWidget(self.bottom_box)
         
         # Auto-refresh timer (every 1 second for live stats)
@@ -758,3 +930,66 @@ class StatisticsWidget(QWidget):
                              add_to_breakdown(activity.name, duration)
 
         self.lifetime_chart.update_data(daily_breakdown)
+
+        # Build comprehensive list of all activities for comboboxes
+        all_activities = set()
+        for d in daily_breakdown:
+            all_activities.update(daily_breakdown[d].keys())
+        all_act_list = sorted(list(all_activities))
+        
+        for i, combo in enumerate(self.group_combos):
+            # Pass cached selections if applicable
+            combo.set_items(all_act_list, initial_checked=self.cached_selections[i])
+            
+        self.refresh_clustered_chart(daily_breakdown)
+
+    def _on_combo_selection_changed(self):
+        # Save to cache
+        try:
+            selections = [c.get_checked_items() for c in self.group_combos]
+            with open(self.cache_file, 'w') as f:
+                json.dump(selections, f)
+            self.cached_selections = selections
+        except Exception as e:
+            print(f"Failed to save chart cache: {e}")
+            
+        self.refresh_clustered_chart()
+
+    def refresh_clustered_chart(self, daily_breakdown=None):
+        if not hasattr(self, 'group_combos') or not hasattr(self, 'clustered_chart'):
+            return
+            
+        # Re-fetch if called directly from CheckableComboBox signal
+        if not isinstance(daily_breakdown, dict):
+            daily_breakdown = self.db.get_daily_activity_breakdown()
+            
+            if self.tracker:
+                import time
+                from datetime import date
+                today = date.today()
+                current_time = time.time()
+                
+                if today not in daily_breakdown:
+                    daily_breakdown[today] = {}
+                
+                def add_to_breakdown(name, duration):
+                    if name in daily_breakdown[today]:
+                        daily_breakdown[today][name] += duration
+                    else:
+                        daily_breakdown[today][name] = duration
+
+                if self.tracker.current_activity and self.tracker.start_time:
+                     duration = current_time - self.tracker.start_time
+                     if duration > 0:
+                         add_to_breakdown(self.tracker.current_activity.name, duration)
+                
+                if hasattr(self.tracker, 'manual_activities') and hasattr(self.tracker, 'manual_start_times'):
+                     for aid, activity in self.tracker.manual_activities.items():
+                         start_t = self.tracker.manual_start_times.get(aid)
+                         if start_t:
+                             duration = current_time - start_t
+                             if duration > 0:
+                                 add_to_breakdown(activity.name, duration)
+                                 
+        groups = [combo.get_checked_items() for combo in self.group_combos]
+        self.clustered_chart.update_data(daily_breakdown, groups, self.group_colors)

@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         self.home_widget = HomeWidget(self.tracker, self.db, self.icon_manager)
         self.activities_widget = ActivitiesWidget(self.db, self.tracker, self.icon_manager)
         self.statistics_widget = StatisticsWidget(self.db, self.tracker)
-        self.settings_widget = SettingsWidget(self.db)
+        self.settings_widget = SettingsWidget(self.db, self.tracker)
         
         self.stack.addWidget(self.home_widget)
         self.stack.addWidget(self.activities_widget)

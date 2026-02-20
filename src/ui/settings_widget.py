@@ -3,6 +3,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QCheckBox, QComboBo
 from PySide6.QtGui import QFont, QPainter, QColor, QPen, QPixmap
 from PySide6.QtCore import Qt, QTimer, Property, QSize, QEasingCurve, QPropertyAnimation
 
+from src.utils.startup_manager import set_run_on_startup, check_run_on_startup
+
 class ToggleSwitch(QWidget):
     def __init__(self, parent=None, track_radius=10, thumb_radius=8):
         super().__init__(parent)
@@ -120,9 +122,10 @@ class SavedDialog(QDialog):
 
 
 class SettingsWidget(QWidget):
-    def __init__(self, db):
+    def __init__(self, db, tracker=None):
         super().__init__()
         self.db = db
+        self.tracker = tracker
         
         self.layout = QVBoxLayout(self)
         self.layout.setAlignment(Qt.AlignTop)
@@ -164,14 +167,14 @@ class SettingsWidget(QWidget):
         g_layout.setSpacing(10)
         g_layout.setContentsMargins(15, 15, 15, 15)
         
-        self.minimize_check = QCheckBox("Minimize to Tray")
-        self.minimize_check.setChecked(True) 
-        self.minimize_check.setStyleSheet("font-size: 14px; color: #ddd;")
-        g_layout.addWidget(self.minimize_check)
-        
         self.startup_check = QCheckBox("Run on Startup")
-        self.startup_check.setChecked(False)
+        
+        # We will read from DB, but also verify with the registry.
+        # DB will override at load.
+        is_startup = check_run_on_startup()
+        self.startup_check.setChecked(is_startup)
         self.startup_check.setStyleSheet("font-size: 14px; color: #ddd;")
+        
         g_layout.addWidget(self.startup_check)
         
         left_col.addWidget(self.general_box)
@@ -268,7 +271,29 @@ class SettingsWidget(QWidget):
         
         self.discord_enabled_switch = ToggleSwitch()
         self.discord_enabled_switch.toggled.connect(self.on_discord_toggled_auto)
+        
+        self.reconnect_btn = QPushButton("Reconnect")
+        self.reconnect_btn.setCursor(Qt.PointingHandCursor)
+        self.reconnect_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5865F2; /* Discord Color */
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 11px;
+                font-weight: bold;
+                margin-left: 10px;
+            }
+            QPushButton:hover {
+                background-color: #4752C4;
+            }
+        """)
+        if hasattr(self, 'tracker') and self.tracker:
+            self.reconnect_btn.clicked.connect(self.tracker.reconnect_discord)
+            
         master_row.addWidget(self.discord_enabled_switch)
+        master_row.addWidget(self.reconnect_btn)
         d_layout.addLayout(master_row)
         
         # Search Bar
@@ -371,11 +396,18 @@ class SettingsWidget(QWidget):
         self.daily_logs_combo.setCurrentIndex(idx)
         self.warning_lbl.setVisible(idx == 1)
 
+        # Startup Setting
+        startup_val = self.db.get_setting("run_on_startup", "False")
+        # Ensure registry matches this database state
+        set_run_on_startup(startup_val == "True")
+        self.startup_check.setChecked(startup_val == "True")
+
         # Discord Globals
         discord_val = self.db.get_setting("discord_enabled", "True")
         is_enabled = (discord_val == "True")
         self.discord_enabled_switch.setChecked(is_enabled)
         self.app_scroll.setEnabled(is_enabled)
+        self.reconnect_btn.setVisible(is_enabled)
         
         # Populate App List
         for i in reversed(range(self.app_list_layout.count())): 
@@ -456,6 +488,7 @@ class SettingsWidget(QWidget):
     def on_discord_toggled_auto(self, checked):
         # 1. Update UI state
         self.app_scroll.setEnabled(checked)
+        self.reconnect_btn.setVisible(checked)
         # 2. Auto-save to DB
         self.db.set_setting("discord_enabled", "True" if checked else "False")
 
@@ -464,7 +497,14 @@ class SettingsWidget(QWidget):
         self.db.update_activity_visibility(activity_id, checked)
 
     def save_settings(self):
-        # ... (Existing Save for Data) ...
+        # 1. Update Startup
+        is_startup = self.startup_check.isChecked()
+        self.db.set_setting("run_on_startup", "True" if is_startup else "False")
+        
+        # Apply Registry Change immediately
+        success = set_run_on_startup(is_startup)
+        
+        # 2. Daily Logs
         daily_logs_val = "True" if self.daily_logs_combo.currentIndex() == 1 else "False"
         self.db.set_setting("daily_logs_only", daily_logs_val)
         
@@ -473,6 +513,9 @@ class SettingsWidget(QWidget):
             msg = f"Settings Saved.\n\nCleanup complete: {deleted} old description logs deleted."
         else:
             msg = "Settings Saved."
+            
+        if is_startup and not success:
+            msg += "\n\nWarning: Could not set Windows Registry to run on startup. Try running as Administrator."
             
         dlg = SavedDialog(msg, self)
         dlg.exec()
