@@ -23,18 +23,7 @@ class ActivityCard(QFrame):
         self.setFixedSize(280, 160) 
         self.setObjectName("ActivityCard")
         
-        # Premium Card Style (Unified)
-        self.setStyleSheet("""
-            QFrame#ActivityCard {
-                background-color: #252526;
-                border: 1px solid #3e3e3e;
-                border-radius: 10px;
-            }
-            QFrame#ActivityCard:hover {
-                background-color: #2d2d30;
-                border-color: #007acc;
-            }
-        """)
+        # Premium Card Style inherited globally
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 12, 15, 12)
@@ -75,7 +64,6 @@ class ActivityCard(QFrame):
         # Name
         name_lbl = QLabel(self.formatted_name)
         name_lbl.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        name_lbl.setStyleSheet("color: white; border: none; background: transparent;")
         titles.addWidget(name_lbl)
         
         # Type Badge (Small Pill)
@@ -85,14 +73,7 @@ class ActivityCard(QFrame):
         
         type_lbl = QLabel(activity.type.upper())
         type_lbl.setFont(QFont("Segoe UI", 8, QFont.Bold))
-        bg_color = "#3e3e3e"
-        text_color = "#aaa"
-        if activity.type == "game":
-             text_color = "#4caf50" # Green for game/irl?
-        elif activity.type == "app":
-             text_color = "#007acc"
-             
-        type_lbl.setStyleSheet(f"background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 4px;")
+        type_lbl.setObjectName("IrlTag")
         badge_layout.addWidget(type_lbl)
         badge_layout.addStretch()
         
@@ -110,12 +91,13 @@ class ActivityCard(QFrame):
         today_box = QVBoxLayout()
         today_box.setSpacing(0)
         lbl_t = QLabel("TODAY")
-        lbl_t.setStyleSheet("color: #888; font-size: 9px; font-weight: bold;")
+        lbl_t.setObjectName("HelperLabel")
+        lbl_t.setStyleSheet("font-size: 9px; font-weight: bold;")
         today_box.addWidget(lbl_t)
         
         self.today_lbl = QLabel("0h 0m")
         self.today_lbl.setFont(QFont("Segoe UI", 14, QFont.Bold)) # Slightly smaller than before
-        self.today_lbl.setStyleSheet("color: #e0e0e0;")
+        self.today_lbl.setObjectName("SectionHeader")
         today_box.addWidget(self.today_lbl)
         stats.addLayout(today_box)
         
@@ -123,12 +105,13 @@ class ActivityCard(QFrame):
         total_box = QVBoxLayout()
         total_box.setSpacing(0)
         lbl_tot = QLabel("TOTAL")
-        lbl_tot.setStyleSheet("color: #666; font-size: 9px; font-weight: bold;")
+        lbl_tot.setObjectName("HelperLabel")
+        lbl_tot.setStyleSheet("font-size: 9px; font-weight: bold;")
         total_box.addWidget(lbl_tot)
         
         self.total_lbl = QLabel("0h 0m")
         self.total_lbl.setFont(QFont("Segoe UI", 11))
-        self.total_lbl.setStyleSheet("color: #999;") # Dimmer
+        self.total_lbl.setObjectName("HelperLabel")
         total_box.addWidget(self.total_lbl)
         stats.addLayout(total_box)
         
@@ -141,71 +124,26 @@ class ActivityCard(QFrame):
         footer = QHBoxLayout()
         footer.setSpacing(8)
         
-        # Edit Button
         self.edit_btn = QPushButton("Edit✎")
         self.edit_btn.setFixedSize(65, 26)
         self.edit_btn.setCursor(Qt.PointingHandCursor)
         self.edit_btn.setToolTip("Edit Info")
-        self.edit_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #333;
-                color: #ddd;
-                border: 1px solid #555;
-                border-radius: 4px;
-                font-weight: bold;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #444;
-                color: white;
-                border-color: #666;
-            }
-        """)
+        self.edit_btn.setObjectName("SecondaryCardButton")
         footer.addWidget(self.edit_btn)
         
-        # Delete Button (New)
         self.del_btn = QPushButton("Del🗑")
         self.del_btn.setFixedSize(65, 26) # Compact
         self.del_btn.setCursor(Qt.PointingHandCursor)
         self.del_btn.setToolTip("Delete Activity")
-        self.del_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #888;
-                border: 1px solid #444;
-                border-radius: 4px;
-                font-weight: bold;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #440000;
-                color: #ff4444;
-                border-color: #aa3333;
-            }
-        """)
+        self.del_btn.setObjectName("DangerCardButton")
         footer.addWidget(self.del_btn)
         
         footer.addStretch()
 
-        # Logs Button (Replaces Start/Stop)
         self.logs_btn = QPushButton("Logs")
         self.logs_btn.setFixedSize(70, 26)
         self.logs_btn.setCursor(Qt.PointingHandCursor)
-        self.logs_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3e3e3e;
-                color: #ddd;
-                border: 1px solid #555;
-                border-radius: 4px;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background-color: #4e4e4e;
-                color: white;
-                border-color: #666;
-            }
-        """)
+        self.logs_btn.setObjectName("SecondaryCardButton")
         footer.addWidget(self.logs_btn)
         
         self.layout.addLayout(footer)
@@ -256,7 +194,6 @@ class ActivitiesWidget(QWidget):
         header = QHBoxLayout()
         title = QLabel("Manage Activities")
         title.setFont(QFont("Segoe UI", 20, QFont.Bold))
-        title.setStyleSheet("color: white;")
         header.addWidget(title)
         
         
@@ -267,19 +204,6 @@ class ActivitiesWidget(QWidget):
         # Search
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search activities...")
-        self.search_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #252526;
-                color: #ddd;
-                border: 1px solid #3e3e3e;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #007acc;
-            }
-        """)
         self.search_input.textChanged.connect(self.on_search_changed)
         self.search_input.setFixedWidth(250)
         controls_layout.addWidget(self.search_input)
@@ -287,31 +211,6 @@ class ActivitiesWidget(QWidget):
         # Filter
         self.filter_combo = QComboBox()
         self.filter_combo.addItems(["All Types", "App", "IRL"])
-        self.filter_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #252526;
-                color: #ddd;
-                border: 1px solid #3e3e3e;
-                border-radius: 4px;
-                padding: 5px 10px;
-                font-size: 13px;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #888;
-                margin-right: 5px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #252526;
-                color: #ddd;
-                selection-background-color: #3e3e3e;
-            }
-        """)
         self.filter_combo.currentTextChanged.connect(self.on_filter_changed)
         self.filter_combo.setFixedWidth(120)
         controls_layout.addWidget(self.filter_combo)

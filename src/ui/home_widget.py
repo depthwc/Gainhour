@@ -28,11 +28,9 @@ class ActiveSessionCard(QFrame):
         if is_live:
             self.setStyleSheet("""
                 QFrame#ActiveSessionCard {
-                    background-color: #252526;
                     border: 1px solid #2fa51f; /* Green Border */
                     border-radius: 8px;
                 }
-                /* ... other styles ... */
             """ + self._get_base_styles())
             # Maybe show a "LIVE" label?
             # Status Badge Logic
@@ -60,8 +58,6 @@ class ActiveSessionCard(QFrame):
              # Revert
              self.setStyleSheet("""
                 QFrame#ActiveSessionCard {
-                    background-color: #252526;
-                    border: 1px solid #3e3e3e;
                     border-radius: 8px;
                 }
              """ + self._get_base_styles())
@@ -128,26 +124,28 @@ class ActiveSessionCard(QFrame):
         self.discord_chk.setCursor(Qt.PointingHandCursor)
         self.discord_chk.setToolTip("Force Pin to Discord")
         self.discord_chk.setFixedSize(28, 28) # Ensure it has size
-        self.discord_chk.setStyleSheet("""
-            QCheckBox::indicator {
+        from src.utils.path_utils import get_resource_path
+        discord_icon_path = get_resource_path("src/icons/discord_icon.png").replace('\\', '/')
+        self.discord_chk.setStyleSheet(f"""
+            QCheckBox::indicator {{
                 width: 24px;
                 height: 24px;
                 border-radius: 12px;
                 subcontrol-position: center;
-            }
-            QCheckBox::indicator:unchecked {
+            }}
+            QCheckBox::indicator:unchecked {{
                 background-color: #2f3136; /* Discord Dark */
                 border: 2px solid #555;
                 image: none;
-            }
-            QCheckBox::indicator:unchecked:hover {
+            }}
+            QCheckBox::indicator:unchecked:hover {{
                 border-color: #7289da;
-            }
-            QCheckBox::indicator:checked {
+            }}
+            QCheckBox::indicator:checked {{
                 border: none;
                 background-color: transparent;
-                image: url(src/icons/discord_icon.png);
-            }
+                image: url({discord_icon_path});
+            }}
         """)
         # If we don't have the white icon easily, just use color. "checkbox for active activities" - standard check is fine.
         # User said "checkbox with discord icon"... I'll try to find if I can reuse styling or just keep simple check.
@@ -171,7 +169,7 @@ class ActiveSessionCard(QFrame):
         # Name
         name_lbl = QLabel(self.display_name)
         name_lbl.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        name_lbl.setStyleSheet("color: white; border: none; background: transparent;")
+        name_lbl.setStyleSheet("border: none; background: transparent;")
         info_layout.addWidget(name_lbl)
         
         # Description Logic
@@ -186,7 +184,8 @@ class ActiveSessionCard(QFrame):
             
             self.desc_lbl = QLabel(disp_title)
             self.desc_lbl.setFont(QFont("Segoe UI", 9))
-            self.desc_lbl.setStyleSheet("color: #aaaaaa; border: none; background: transparent;")
+            self.desc_lbl.setObjectName("HelperLabel")
+            self.desc_lbl.setStyleSheet("border: none; background: transparent;")
             self.desc_lbl.setWordWrap(True) 
             self.desc_lbl.setAlignment(Qt.AlignLeft | Qt.AlignTop)
             desc_layout.addWidget(self.desc_lbl)
@@ -194,7 +193,8 @@ class ActiveSessionCard(QFrame):
             # Stats Label for Title
             self.desc_stats_lbl = QLabel("")
             self.desc_stats_lbl.setFont(QFont("Segoe UI", 8))
-            self.desc_stats_lbl.setStyleSheet("color: #666666; margin-top: 2px;")
+            self.desc_stats_lbl.setObjectName("HelperLabel")
+            self.desc_stats_lbl.setStyleSheet("margin-top: 2px;")
             desc_layout.addWidget(self.desc_stats_lbl)
             
             info_layout.addLayout(desc_layout)
@@ -217,20 +217,7 @@ class ActiveSessionCard(QFrame):
             
             self.add_desc_btn = QPushButton("+ Add Description")
             self.add_desc_btn.setCursor(Qt.PointingHandCursor)
-            self.add_desc_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    color: #007acc;
-                    border: 1px dashed #007acc;
-                    border-radius: 4px;
-                    font-size: 10px;
-                    padding: 4px 8px;
-                    text-align: left;
-                }
-                QPushButton:hover {
-                    background-color: rgba(0, 122, 204, 0.1);
-                }
-            """)
+            self.add_desc_btn.setObjectName("AccentButton")
             self.add_desc_btn.clicked.connect(self.prompt_description)
             btn_layout.addWidget(self.add_desc_btn)
             
@@ -242,7 +229,7 @@ class ActiveSessionCard(QFrame):
             
             self.user_desc_lbl = QLabel(current_desc)
             self.user_desc_lbl.setFont(QFont("Segoe UI", 9))
-            self.user_desc_lbl.setStyleSheet("color: #aaaaaa;")
+            self.user_desc_lbl.setObjectName("HelperLabel")
             # Make clickable to edit again
             self.user_desc_lbl.setCursor(Qt.PointingHandCursor)
             self.user_desc_lbl.mousePressEvent = self.prompt_description 
@@ -252,7 +239,8 @@ class ActiveSessionCard(QFrame):
             edit_btn = QPushButton("✎")
             edit_btn.setFixedSize(20, 20)
             edit_btn.setCursor(Qt.PointingHandCursor)
-            edit_btn.setStyleSheet("color: #666; background: transparent; border: none;")
+            edit_btn.setObjectName("HelperLabel") # So the text logic is somewhat inherited, though it's a button. Wait, a button with "HelperLabel" won't work perfectly. Let's make it inherit border:none.
+            edit_btn.setStyleSheet("background: transparent; border: none;")
             edit_btn.clicked.connect(self.prompt_description)
             lbl_layout.addWidget(edit_btn)
 
@@ -271,12 +259,14 @@ class ActiveSessionCard(QFrame):
         # Timer
         self.timer_lbl = QLabel("00:00:00")
         self.timer_lbl.setFont(QFont("Roboto Medium", 16, QFont.Bold))
-        self.timer_lbl.setStyleSheet("color: #e0e0e0; border: none; background: transparent;")
+        self.timer_lbl.setObjectName("AccentText")
+        self.timer_lbl.setStyleSheet("border: none; background: transparent;")
         info_layout.addWidget(self.timer_lbl)
         
         # Stats
         self.stats_lbl = QLabel("Total: 0h 0m")
-        self.stats_lbl.setStyleSheet("color: #999; font-size: 10px; border: none; background: transparent;")
+        self.stats_lbl.setObjectName("AccentText")
+        self.stats_lbl.setStyleSheet("font-size: 10px; border: none; background: transparent;")
         info_layout.addWidget(self.stats_lbl)
         
         layout.addLayout(info_layout)
@@ -444,7 +434,7 @@ class HomeWidget(QWidget):
         # Apps List
         self.apps_label = QLabel("All Applications")
         self.apps_label.setFont(QFont("Segoe UI", 16, QFont.Bold))
-        self.apps_label.setStyleSheet("color: white; margin-top: 10px;")
+        self.apps_label.setStyleSheet("margin-top: 10px;")
         self.layout.addWidget(self.apps_label)
         
         self.scroll = QScrollArea()
@@ -477,25 +467,12 @@ class HomeWidget(QWidget):
         # 1. Label
         lbl = QLabel("Active Sessions")
         lbl.setFont(QFont("Segoe UI", 16, QFont.Bold))
-        lbl.setStyleSheet("color: white;")
+        lbl.setStyleSheet("")
         
         # 1b. Reconnect Discord Button (Top Right)
         self.reconnect_btn = QPushButton("Reconnect to Discord")
         self.reconnect_btn.setCursor(Qt.PointingHandCursor)
-        self.reconnect_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #5865F2; /* Discord Color */
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 6px 12px;
-                font-size: 11px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #4752C4;
-            }
-        """)
+        self.reconnect_btn.setObjectName("DiscordButton")
         self.reconnect_btn.clicked.connect(self.tracker.reconnect_discord)
         # Hide initially, updated in update_data
         self.reconnect_btn.setVisible(False)
@@ -525,18 +502,17 @@ class HomeWidget(QWidget):
         
         self.active_scroll.setStyleSheet("""
              QScrollArea#ActivityCard {
-                background-color: #1e1e1e;
-                border: 1px solid #333;
                 border-radius: 8px;
+                background-color: transparent;
              }
              QWidget { background: transparent; }
              QScrollBar:horizontal {
                 height: 12px;
-                background: #1e1e1e;
+                background: transparent;
                 margin: 0px 0px 0px 0px;
              }
              QScrollBar::handle:horizontal {
-                background: #444;
+                background: rgba(128, 128, 128, 0.5);
                 min-width: 20px;
                 border-radius: 6px;
              }
@@ -562,26 +538,22 @@ class HomeWidget(QWidget):
         
         # --- Total Today Timer ---
         self.total_card = QFrame()
-        self.total_card.setName = "ActivityCard" # Reuse style
+        self.total_card.setObjectName("ActivityCard")
         self.total_card.setFixedWidth(240)
         # Match height of the scroll area for symmetry
         self.total_card.setFixedHeight(250) 
-        self.total_card.setStyleSheet("""
-            background-color: #252526; 
-            border-radius: 8px; 
-            border: 1px solid #3e3e3e;
-        """)
         
         t_layout = QVBoxLayout(self.total_card)
         t_layout.setAlignment(Qt.AlignCenter)
         
         lbl_total = QLabel("TOTAL TODAY")
-        lbl_total.setStyleSheet("color: #a0a0a0; font-weight: bold; font-size: 12px; letter-spacing: 1px;")
+        lbl_total.setObjectName("SectionHeader")
+        lbl_total.setStyleSheet("font-weight: bold; font-size: 12px; letter-spacing: 1px;")
         t_layout.addWidget(lbl_total)
         
         self.total_timer_lbl = QLabel("00:00:00")
         self.total_timer_lbl.setFont(QFont("Roboto Medium", 28, QFont.Bold))
-        self.total_timer_lbl.setStyleSheet("color: #007acc;")
+        self.total_timer_lbl.setObjectName("AccentText")
         t_layout.addWidget(self.total_timer_lbl)
         
         content_h_layout.addWidget(self.total_card)
@@ -858,16 +830,7 @@ class HomeWidget(QWidget):
 
     def create_app_row(self, info, total_seconds, today_seconds):
         row = QFrame()
-        # Row styling
-        row.setStyleSheet("""
-            QFrame {
-                background-color: #2b2b2b;
-                border-radius: 6px;
-            }
-            QFrame:hover {
-                background-color: #333333;
-            }
-        """)
+        row.setObjectName("ActivityCard")
         row.setFixedHeight(55)
         
         layout = QHBoxLayout(row)
@@ -886,7 +849,7 @@ class HomeWidget(QWidget):
         else:
              # Text fallback
              icon_lbl.setText(info['name'][:2].upper())
-             icon_lbl.setStyleSheet("background-color: #444; color: white; border-radius: 4px; qproperty-alignment: AlignCenter;")
+             icon_lbl.setObjectName("AppIcon")
         
         layout.addWidget(icon_lbl)
         
@@ -895,14 +858,14 @@ class HomeWidget(QWidget):
         
         name_lbl = QLabel(formatted_name)
         name_lbl.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        name_lbl.setStyleSheet("color: white; border: none; background: transparent;")
+        name_lbl.setStyleSheet("border: none; background: transparent;")
         layout.addWidget(name_lbl)
         
         layout.addStretch()
         if info['is_irl']:
              tag = QLabel("IRL")
              tag.setFont(QFont("Segoe UI", 8, QFont.Bold))
-             tag.setStyleSheet("background-color: #3e3e3e; color: #aaa; padding: 2px 6px; border-radius: 4px;")
+             tag.setObjectName("IrlTag")
              layout.addWidget(tag)
              
         
@@ -914,7 +877,7 @@ class HomeWidget(QWidget):
         time_text = f"Today: {int(h_today)}h {int(m_today)}m  •  Total: {int(h_tot)}h {int(m_tot)}m"
         time_lbl = QLabel(time_text)
         time_lbl.setFont(QFont("Segoe UI", 10))
-        time_lbl.setStyleSheet("background: transparent; color: #888;")
+        time_lbl.setObjectName("HelperLabel")
         layout.addWidget(time_lbl)
         
         if info['is_irl']:
@@ -923,22 +886,7 @@ class HomeWidget(QWidget):
              edit_btn.setFixedSize(65, 30) # Wider for text
              edit_btn.setCursor(Qt.PointingHandCursor)
              edit_btn.setToolTip("Edit Info")
-             # Use a visible style
-             edit_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #333;
-                    color: #ddd;
-                    border: 1px solid #555;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 10px;
-                }
-                QPushButton:hover {
-                    background-color: #444;
-                    color: white;
-                    border-color: #666;
-                }
-             """)
+             edit_btn.setObjectName("SecondaryCardButton")
              # Need act for editing
              act_for_edit = self.db.get_or_create_activity(info['name'], info['type'])
              edit_btn.clicked.connect(lambda: self.open_add_dialog(act_for_edit))
@@ -949,20 +897,7 @@ class HomeWidget(QWidget):
         del_btn.setFixedSize(65, 30)
         del_btn.setCursor(Qt.PointingHandCursor)
         del_btn.setToolTip(f"Delete {info['name']}")
-        del_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #888;
-                border: 1px solid #444;
-                border-radius: 4px;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #440000;
-                color: #ff4444;
-                border-color: #aa3333;
-            }
-        """)
+        del_btn.setObjectName("DangerCardButton")
         # We need the activity object to delete
         # Note: get_or_create_activity is cheap if exists, but we are calling it multiple times.
         # It's fine for now.
@@ -977,41 +912,13 @@ class HomeWidget(QWidget):
         act = self.db.get_or_create_activity(info['name'], info['type'])
         if self.tracker.is_manual_running(act.id):
              btn.setText("Stop")
-             btn.setObjectName("StopButton")
-             # Force style - Red Outline -> Red Fill
-             btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent; 
-                    color: #cc4444; 
-                    border: 1px solid #cc4444;
-                    border-radius: 4px;
-                    font-weight: bold;
-                }
-                QPushButton:hover { 
-                    background-color: #cc4444; 
-                    color: white;
-                }
-             """)
+             btn.setObjectName("StopCardButton")
              btn.clicked.connect(lambda: self.tracker.stop_manual_session(act))
              # Force refresh on click
              btn.clicked.connect(lambda: QTimer.singleShot(100, self.refresh_list))
         else:
              btn.setText("Start")
-             btn.setObjectName("PrimaryButton")
-             # Force style - Green Outline -> Green Fill
-             btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent; 
-                    color: #2fa51f; 
-                    border: 1px solid #2fa51f;
-                    border-radius: 4px;
-                    font-weight: bold;
-                }
-                QPushButton:hover { 
-                    background-color: #2fa51f; 
-                    color: white;
-                }
-             """)
+             btn.setObjectName("StartCardButton")
              btn.clicked.connect(lambda: self.tracker.start_manual_session(act))
              btn.clicked.connect(lambda: QTimer.singleShot(100, self.refresh_list))
              

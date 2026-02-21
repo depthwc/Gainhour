@@ -1,0 +1,20 @@
+{
+    "theme_name": "Night Mode",
+    "bg_main": "#1e1e1e",
+    "text_main": "#e0e0e0",
+    "text_secondary": "#aaaaaa",
+    "bg_nav": "#252526",
+    "border": "#3e3e3e",
+    "nav_hover": "#37373d",
+    "nav_text": "#a0a0a0",
+    "primary": "#5865F2",
+    "primary_hover": "#4752C4",
+    "card_bg": "#252526",
+    "stop_btn": "#ff9900",
+    "stop_btn_hover": "#e68a00",
+    "stop_btn_text": "black",
+    "input_bg": "#3c3c3c",
+    "input_border": "#3c3c3c",
+    "input_focus": "#5865F2",
+    "danger_text": "#ff4444"
+}

@@ -8,7 +8,8 @@ import win32api
 
 class IconManager:
     def __init__(self, icons_dir="assets/icons"):
-        self.icons_dir = icons_dir
+        from src.utils.path_utils import get_db_path
+        self.icons_dir = get_db_path(icons_dir)
         if not os.path.exists(self.icons_dir):
             os.makedirs(self.icons_dir)
     

@@ -1,0 +1,20 @@
+{
+    "theme_name": "White Mode",
+    "bg_main": "#f0f0f0",
+    "text_main": "#333333",
+    "text_secondary": "#666666",
+    "bg_nav": "#ffffff",
+    "border": "#cccccc",
+    "nav_hover": "#e0e0e0",
+    "nav_text": "#555555",
+    "primary": "#007acc",
+    "primary_hover": "#005a9e",
+    "card_bg": "#ffffff",
+    "stop_btn": "#ff9900",
+    "stop_btn_hover": "#e68a00",
+    "stop_btn_text": "black",
+    "input_bg": "#ffffff",
+    "input_border": "#cccccc",
+    "input_focus": "#007acc",
+    "danger_text": "#cc0000"
+}

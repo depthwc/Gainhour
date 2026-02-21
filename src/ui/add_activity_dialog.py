@@ -4,6 +4,8 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap, QFont
 import os
 
+from src.ui.styles import get_stylesheet
+
 class AddActivityDialog(QDialog):
     def __init__(self, parent, db, icon_manager, activity_to_edit=None):
         super().__init__(parent)
@@ -14,36 +16,21 @@ class AddActivityDialog(QDialog):
         
         self.setWindowTitle("Edit Activity" if activity_to_edit else "Add IRL Activity")
         self.setFixedSize(350, 450) # Taller, narrower for modern look
-        self.setStyleSheet("""
-            QDialog { background-color: #2b2b2b; color: white; }
-            QLabel { color: #bbbbbb; font-size: 13px; font-weight: bold; }
-            QLineEdit { 
-                padding: 10px; 
-                background-color: #333333; 
-                border: 1px solid #444444; 
-                border-radius: 6px;
-                color: white;
-                font-size: 14px;
-            }
-            QLineEdit:focus { border: 1px solid #007acc; }
+        
+        # Apply Global Theme directly to Dialog
+        self.setStyleSheet(get_stylesheet("theme") + """
             QPushButton#SaveBtn {
                 padding: 10px;
-                background-color: #007acc;
                 border: none;
                 border-radius: 6px;
-                color: white;
                 font-weight: bold;
                 font-size: 14px;
             }
-            QPushButton#SaveBtn:hover { background-color: #0062a3; }
             QPushButton#CancelBtn {
                 padding: 10px;
                 background-color: transparent;
-                border: 1px solid #555;
                 border-radius: 6px;
-                color: #ddd;
             }
-            QPushButton#CancelBtn:hover { background-color: #333; }
         """)
         
         layout = QVBoxLayout(self)
@@ -58,23 +45,18 @@ class AddActivityDialog(QDialog):
         self.icon_btn.setFixedSize(120, 120)
         self.icon_btn.setCursor(Qt.PointingHandCursor)
         self.icon_btn.clicked.connect(self.browse_icon)
+        self.icon_btn.setObjectName("SecondaryButton")
         self.icon_btn.setStyleSheet("""
             QPushButton {
-                background-color: #333333;
                 border: 2px dashed #555;
                 border-radius: 12px;
-                color: #777;
-            }
-            QPushButton:hover {
-                border-color: #007acc;
-                color: #007acc;
-                background-color: #383838;
             }
         """)
         icon_layout.addWidget(self.icon_btn)
         
         icon_hint = QLabel("Select Icon")
-        icon_hint.setStyleSheet("color: #777; font-size: 11px; font-weight: normal; margin-top: 5px;")
+        icon_hint.setObjectName("SectionHeader")
+        icon_hint.setStyleSheet("font-size: 11px; font-weight: normal; margin-top: 5px;")
         icon_layout.addWidget(icon_hint, 0, Qt.AlignCenter)
         
         layout.addLayout(icon_layout)
@@ -87,6 +69,7 @@ class AddActivityDialog(QDialog):
         name_container = QVBoxLayout()
         name_container.setSpacing(5)
         name_lbl = QLabel("ACTIVITY NAME")
+        name_lbl.setObjectName("SectionHeader")
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("e.g. Reading, Workout")
         name_container.addWidget(name_lbl)
@@ -97,6 +80,7 @@ class AddActivityDialog(QDialog):
         desc_container = QVBoxLayout()
         desc_container.setSpacing(5)
         desc_lbl = QLabel("DESCRIPTION (OPTIONAL)")
+        desc_lbl.setObjectName("SectionHeader")
         self.desc_input = QLineEdit()
         self.desc_input.setPlaceholderText("Brief description...")
         desc_container.addWidget(desc_lbl)
@@ -111,11 +95,11 @@ class AddActivityDialog(QDialog):
         btn_layout.setSpacing(10)
         
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setObjectName("CancelBtn")
+        cancel_btn.setObjectName("SecondaryButton")
         cancel_btn.clicked.connect(self.reject)
         
         save_btn = QPushButton("Create Activity" if not activity_to_edit else "Save Changes")
-        save_btn.setObjectName("SaveBtn")
+        save_btn.setObjectName("PrimaryButton")
         save_btn.clicked.connect(self.save)
         
         btn_layout.addWidget(cancel_btn)
@@ -138,19 +122,13 @@ class AddActivityDialog(QDialog):
     def set_default_icon_state(self):
         self.icon_btn.setText("+")
         self.icon_btn.setIcon(QIcon())
+        self.icon_btn.setObjectName("SecondaryButton")
         self.icon_btn.setStyleSheet("""
             QPushButton {
-                background-color: #333333;
                 border: 2px dashed #555;
                 border-radius: 12px;
-                color: #777;
                 font-size: 40px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                border-color: #007acc;
-                color: #007acc;
-                background-color: #383838;
             }
         """)
 
@@ -163,14 +141,12 @@ class AddActivityDialog(QDialog):
                 self.icon_btn.setIcon(icon)
                 self.icon_btn.setIconSize(QSize(80, 80))
                 # Solid border for selected
+                self.icon_btn.setObjectName("SecondaryButton")
                 self.icon_btn.setStyleSheet("""
                     QPushButton {
                         background-color: transparent;
                         border: 2px solid #555;
                         border-radius: 12px;
-                    }
-                    QPushButton:hover {
-                        border-color: #007acc;
                     }
                 """)
 

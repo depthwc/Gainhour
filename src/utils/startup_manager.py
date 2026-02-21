@@ -15,7 +15,7 @@ def get_executable_path():
         # (needs python.exe path/to/main.py). For this app, we'll assume the 
         # built EXE is what users want to run on startup.
         # But we'll provide the python command as a fallback for testing.
-        main_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'main.py'))
+        main_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'main.py'))
         return f'"{sys.executable}" "{main_script}"'
 
 def set_run_on_startup(enable: bool, app_name: str = "Gainhour"):

@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['src\\main.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/icons', 'src/icons')],
+    datas=[('src/icons', 'src/icons'), ('themes', 'themes'), ('gainhour.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

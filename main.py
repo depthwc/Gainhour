@@ -1,9 +1,8 @@
 import sys
 import os
 
-# Add project root to sys.path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
+    # Add project root to sys.path
+project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
@@ -15,17 +14,21 @@ from src.database.storage import init_db, StorageManager
 def main():
     app = QApplication(sys.argv)
     
+    from src.utils.path_utils import get_resource_path, get_db_path
+    
     # Set Global Icon
-    if os.path.exists("gainhour.ico"):
-        app.setWindowIcon(QIcon("gainhour.ico"))
+    icon_path = get_resource_path("gainhour.ico")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     
     # Set Metadata
     app.setApplicationName("Gainhour")
     app.setOrganizationName("Gainhour")     
     
     # Initialize DB & Cleanup (Crash Recovery)
-    init_db("gainhour.db")
-    db = StorageManager("gainhour.db")
+    db_file = get_db_path("gainhour.db")
+    init_db(db_file)
+    db = StorageManager(db_file)
     db.cleanup_incomplete_logs()
     
     # Check for Daily Logs Only Setting (Cleanup on startup)

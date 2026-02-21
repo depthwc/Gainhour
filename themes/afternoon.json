@@ -1,0 +1,20 @@
+{
+    "theme_name": "Afternoon",
+    "bg_main": "#fff8e1",
+    "text_main": "#4e342e",
+    "text_secondary": "#8d6e63",
+    "bg_nav": "#ffecb3",
+    "border": "#ffd54f",
+    "nav_hover": "#ffe082",
+    "nav_text": "#5d4037",
+    "primary": "#ff8f00",
+    "primary_hover": "#ff6f00",
+    "card_bg": "#ffecb3",
+    "stop_btn": "#ff3d00",
+    "stop_btn_hover": "#dd2c00",
+    "stop_btn_text": "white",
+    "input_bg": "#ffffff",
+    "input_border": "#ffd54f",
+    "input_focus": "#ff8f00",
+    "danger_text": "#d84315"
+}

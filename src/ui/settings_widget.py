@@ -1,9 +1,10 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QCheckBox, QComboBox, 
-                               QPushButton, QHBoxLayout, QFrame, QDialog, QScrollArea, QSizePolicy, QLineEdit)
+                               QPushButton, QHBoxLayout, QFrame, QDialog, QScrollArea, QSizePolicy, QLineEdit, QColorDialog, QGridLayout)
 from PySide6.QtGui import QFont, QPainter, QColor, QPen, QPixmap
 from PySide6.QtCore import Qt, QTimer, Property, QSize, QEasingCurve, QPropertyAnimation
 
 from src.utils.startup_manager import set_run_on_startup, check_run_on_startup
+from src.ui.styles import THEMES
 
 class ToggleSwitch(QWidget):
     def __init__(self, parent=None, track_radius=10, thumb_radius=8):
@@ -69,7 +70,19 @@ class ToggleSwitch(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         
         # Draw Track
-        track_color = QColor("#5865F2") if self._checked else QColor("#444")
+        # Fetch dynamic primary color
+        primary_color = "#5865F2"
+        try:
+            from src.ui.styles import themes_dir, FALLBACK_THEME
+            import os, json
+            main_theme_path = os.path.join(themes_dir, "theme.json")
+            if os.path.exists(main_theme_path):
+                with open(main_theme_path, 'r', encoding='utf-8') as f:
+                    t = json.load(f)
+                    primary_color = t.get('primary', FALLBACK_THEME['primary'])
+        except: pass
+        
+        track_color = QColor(primary_color) if self._checked else QColor("#444")
         p.setBrush(track_color)
         p.setPen(Qt.NoPen)
         p.drawRoundedRect(0, 0, self.width(), self.height(), self.height() / 2, self.height() / 2)
@@ -99,7 +112,6 @@ class SavedDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Saved")
         self.setFixedSize(300, 150)
-        self.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444;")
         
         layout = QVBoxLayout(self)
         layout.setSpacing(20)
@@ -107,11 +119,10 @@ class SavedDialog(QDialog):
         lbl = QLabel(message)
         lbl.setWordWrap(True)
         lbl.setAlignment(Qt.AlignCenter)
-        lbl.setStyleSheet("font-size: 14px;")
         layout.addWidget(lbl)
         
         btn = QPushButton("OK")
-        btn.setStyleSheet("background-color: #007acc; padding: 8px; border-radius: 4px; font-weight: bold;")
+        btn.setObjectName("PrimaryButton")
         btn.clicked.connect(self.accept)
         
         h_layout = QHBoxLayout()
@@ -120,6 +131,61 @@ class SavedDialog(QDialog):
         h_layout.addStretch()
         layout.addLayout(h_layout)
 
+
+class ResetDataDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Reset All Data")
+        self.setFixedSize(400, 250)
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        
+        # Warning label
+        warning_lbl = QLabel("⚠ DANGER: This will delete ALL your tracked data, apps, and settings. This action CANNOT be undone.")
+        warning_lbl.setWordWrap(True)
+        warning_lbl.setAlignment(Qt.AlignCenter)
+        warning_lbl.setObjectName("WarningLabel")
+        layout.addWidget(warning_lbl)
+        
+        # Checkbox
+        self.confirm_check = QCheckBox("I understand this cannot be undone.")
+        layout.addWidget(self.confirm_check)
+        
+        # Instructions and Input
+        inst_lbl = QLabel("Type 'i am sure' below to confirm:")
+        inst_lbl.setObjectName("HelperLabel")
+        layout.addWidget(inst_lbl)
+        
+        self.confirm_input = QLineEdit()
+        self.confirm_input.setPlaceholderText("i am sure")
+        layout.addWidget(self.confirm_input)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        
+        self.ok_btn = QPushButton("Delete Everything")
+        self.ok_btn.setObjectName("DangerButton")
+        self.ok_btn.setEnabled(False)
+        self.ok_btn.clicked.connect(self.accept)
+        
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(self.ok_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        # Connect validation
+        self.confirm_check.toggled.connect(self.validate)
+        self.confirm_input.textChanged.connect(self.validate)
+
+    def validate(self):
+        is_checked = self.confirm_check.isChecked()
+        is_text_matching = self.confirm_input.text().strip() == "i am sure"
+        self.ok_btn.setEnabled(is_checked and is_text_matching)
 
 class SettingsWidget(QWidget):
     def __init__(self, db, tracker=None):
@@ -135,7 +201,7 @@ class SettingsWidget(QWidget):
         # Title
         title = QLabel("Settings")
         title.setFont(QFont("Segoe UI", 24, QFont.Bold))
-        title.setStyleSheet("color: white; margin-bottom: 20px;")
+        title.setObjectName("SectionHeader")
         self.layout.addWidget(title)
 
         # Main Content Layout (Columns)
@@ -151,18 +217,11 @@ class SettingsWidget(QWidget):
         # 1. General Section
         general_lbl = QLabel("General")
         general_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        general_lbl.setStyleSheet("color: #aaaaaa;")
+        general_lbl.setObjectName("SectionHeader")
         left_col.addWidget(general_lbl)
         
         self.general_box = QFrame()
-        self.general_box.setObjectName("GeneralBox")
-        self.general_box.setStyleSheet("""
-            QFrame#GeneralBox {
-                background-color: #2b2b2b;
-                border: 1px solid #3e3e3e;
-                border-radius: 8px;
-            }
-        """)
+        self.general_box.setObjectName("SettingsCard")
         g_layout = QVBoxLayout(self.general_box)
         g_layout.setSpacing(10)
         g_layout.setContentsMargins(15, 15, 15, 15)
@@ -173,7 +232,6 @@ class SettingsWidget(QWidget):
         # DB will override at load.
         is_startup = check_run_on_startup()
         self.startup_check.setChecked(is_startup)
-        self.startup_check.setStyleSheet("font-size: 14px; color: #ddd;")
         
         g_layout.addWidget(self.startup_check)
         
@@ -182,18 +240,11 @@ class SettingsWidget(QWidget):
         # 2. Data Management Section
         data_lbl = QLabel("Data Management")
         data_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        data_lbl.setStyleSheet("color: #aaaaaa;")
+        data_lbl.setObjectName("SectionHeader")
         left_col.addWidget(data_lbl)
         
         self.logs_box = QFrame()
-        self.logs_box.setObjectName("LogsBox")
-        self.logs_box.setStyleSheet("""
-            QFrame#LogsBox {
-                background-color: #2b2b2b;
-                border: 1px solid #3e3e3e;
-                border-radius: 8px;
-            }
-        """)
+        self.logs_box.setObjectName("SettingsCard")
         
         logs_layout = QVBoxLayout(self.logs_box)
         logs_layout.setSpacing(10)
@@ -202,24 +253,22 @@ class SettingsWidget(QWidget):
         daily_container = QHBoxLayout()
         daily_container.setAlignment(Qt.AlignLeft)
         daily_lbl = QLabel("Keep Only Daily Logs?")
-        daily_lbl.setStyleSheet("font-size: 14px; color: #ddd; margin-right: 15px; border: none; background: transparent;")
         daily_container.addWidget(daily_lbl)
         self.daily_logs_combo = QComboBox()
         self.daily_logs_combo.addItems(["No", "Yes"])
         self.daily_logs_combo.setFixedWidth(80)
-        self.daily_logs_combo.setStyleSheet("QComboBox { padding: 5px; border: 1px solid #555; border-radius: 4px; background-color: #333; color: white; } QComboBox::drop-down { border: none; }")
         daily_container.addWidget(self.daily_logs_combo)
         logs_layout.addLayout(daily_container)
         
         self.warning_lbl = QLabel("⚠ 'Yes' will delete all history except today on save.")
-        self.warning_lbl.setStyleSheet("color: #aa6666; font-size: 12px; font-style: italic; border: none; background: transparent;")
+        self.warning_lbl.setObjectName("WarningLabel")
         self.warning_lbl.setVisible(False)
         logs_layout.addWidget(self.warning_lbl)
         
         self.save_btn = QPushButton("Save")
         self.save_btn.setFixedSize(80, 30)
         self.save_btn.setCursor(Qt.PointingHandCursor)
-        self.save_btn.setStyleSheet("QPushButton { background-color: #007acc; color: white; border: none; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #0062a3; }")
+        self.save_btn.setObjectName("PrimaryButton")
         self.save_btn.clicked.connect(self.save_settings)
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
@@ -235,27 +284,21 @@ class SettingsWidget(QWidget):
         
         # Icon
         d_icon = QLabel()
-        d_pix = QPixmap("src/icons/discord_icon.png")
+        from src.utils.path_utils import get_resource_path
+        d_pix = QPixmap(get_resource_path("src/icons/discord_icon.png"))
         if not d_pix.isNull():
             d_icon.setPixmap(d_pix.scaled(28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             discord_header.addWidget(d_icon)
             
         discord_lbl = QLabel("Discord Integration")
         discord_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        discord_lbl.setStyleSheet("color: #aaaaaa;")
+        discord_lbl.setObjectName("SectionHeader")
         discord_header.addWidget(discord_lbl)
         
         left_col.addLayout(discord_header)
 
         self.discord_box = QFrame()
-        self.discord_box.setObjectName("DiscordBox")
-        self.discord_box.setStyleSheet("""
-            QFrame#DiscordBox {
-                background-color: #2b2b2b;
-                border: 1px solid #3e3e3e;
-                border-radius: 8px;
-            }
-        """)
+        self.discord_box.setObjectName("SettingsCard")
         self.discord_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) 
         
         d_layout = QVBoxLayout(self.discord_box)
@@ -265,7 +308,7 @@ class SettingsWidget(QWidget):
         # Master Toggle ROW
         master_row = QHBoxLayout()
         master_lbl = QLabel("Enable Discord Rich Presence")
-        master_lbl.setStyleSheet("font-size: 14px; color: #ddd; font-weight: bold;")
+        master_lbl.setObjectName("SectionHeader")
         master_row.addWidget(master_lbl)
         master_row.addStretch()
         
@@ -274,21 +317,7 @@ class SettingsWidget(QWidget):
         
         self.reconnect_btn = QPushButton("Reconnect")
         self.reconnect_btn.setCursor(Qt.PointingHandCursor)
-        self.reconnect_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #5865F2; /* Discord Color */
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 6px 12px;
-                font-size: 11px;
-                font-weight: bold;
-                margin-left: 10px;
-            }
-            QPushButton:hover {
-                background-color: #4752C4;
-            }
-        """)
+        self.reconnect_btn.setObjectName("DiscordButton")
         if hasattr(self, 'tracker') and self.tracker:
             self.reconnect_btn.clicked.connect(self.tracker.reconnect_discord)
             
@@ -299,39 +328,25 @@ class SettingsWidget(QWidget):
         # Search Bar
         search_layout = QHBoxLayout()
         search_icon = QLabel("🔍")
-        search_icon.setStyleSheet("color: #888; border: none; font-size: 14px;")
         search_layout.addWidget(search_icon)
         
         self.status_search = QLineEdit()
         self.status_search.setPlaceholderText("Search apps...")
-        self.status_search.setStyleSheet("""
-            QLineEdit {
-                background-color: #222;
-                color: #ddd;
-                border: 1px solid #444;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border: 1px solid #555;
-            }
-        """)
         self.status_search.textChanged.connect(self.filter_apps)
         search_layout.addWidget(self.status_search)
         d_layout.addLayout(search_layout)
         
         helper_lbl = QLabel("Select apps to share on Discord (Auto-Saved):")
-        helper_lbl.setStyleSheet("color: #888; font-size: 12px;")
+        helper_lbl.setObjectName("HelperLabel")
         d_layout.addWidget(helper_lbl)
 
         self.app_scroll = QScrollArea()
         self.app_scroll.setWidgetResizable(True)
         self.app_scroll.setFixedHeight(300) 
         self.app_scroll.setStyleSheet("""
-            QScrollArea { border: 1px solid #444; border-radius: 4px; background-color: #222; }
-            QScrollBar:vertical { width: 10px; background: #222; }
-            QScrollBar::handle:vertical { background: #444; border-radius: 5px; }
+            QScrollArea { border-radius: 4px; }
+            QScrollBar:vertical { width: 10px; }
+            QScrollBar::handle:vertical { border-radius: 5px; }
         """)
         
         self.app_list_widget = QWidget()
@@ -355,29 +370,122 @@ class SettingsWidget(QWidget):
         
         custom_lbl = QLabel("Customization")
         custom_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        custom_lbl.setStyleSheet("color: #aaaaaa;")
+        custom_lbl.setObjectName("SectionHeader")
         right_col.addWidget(custom_lbl)
         
         self.custom_box = QFrame()
-        self.custom_box.setObjectName("CustomBox")
-        self.custom_box.setStyleSheet("""
-            QFrame#CustomBox {
-                background-color: #222;
-                border: 2px dashed #444;
-                border-radius: 8px;
-            }
-        """)
-        self.custom_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.custom_box.setObjectName("SettingsCard")
         
         c_layout = QVBoxLayout(self.custom_box)
-        c_layout.setAlignment(Qt.AlignCenter)
+        c_layout.setSpacing(10)
+        c_layout.setContentsMargins(15, 15, 15, 15)
         
-        c_lbl = QLabel("Design & Coloring Settings\n(Coming Soon)")
-        c_lbl.setAlignment(Qt.AlignCenter)
-        c_lbl.setStyleSheet("color: #666; font-size: 14px; font-style: italic;")
+        c_lbl = QLabel("Select Theme:")
         c_layout.addWidget(c_lbl)
         
+        # Theme Buttons Layout
+        theme_btn_layout = QHBoxLayout()
+        theme_btn_layout.setSpacing(10)
+        
+        def create_theme_btn(name, bg_color, text_color, theme_id):
+            btn = QPushButton(name)
+            btn.setCursor(Qt.PointingHandCursor)
+            
+            # Keep basic colors inline since they represent that specific theme's preview,
+            # but don't hardcode other styling that might clash.
+            theme_primary = THEMES.get(theme_id, {}).get("primary", "#5865F2")
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {bg_color};
+                    color: {text_color};
+                    border: 1px solid #555;
+                    border-radius: 4px;
+                    padding: 8px;
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{
+                    border: 1px solid {theme_primary};
+                }}
+            """)
+            btn.clicked.connect(lambda: self.on_theme_changed(theme_id))
+            return btn
+            
+        for theme_id, theme_data in THEMES.items():
+            t_name = theme_data.get("theme_name", theme_id.title())
+            bg = theme_data.get("bg_main", "#1e1e1e")
+            txt = theme_data.get("text_main", "#e0e0e0")
+            btn = create_theme_btn(t_name, bg, txt, theme_id)
+            theme_btn_layout.addWidget(btn)
+        
+        c_layout.addLayout(theme_btn_layout)
+        
+        # --- Advanced Colors ---
+        adv_lbl = QLabel("Advanced Colors:")
+        adv_lbl.setStyleSheet("margin-top: 10px; font-weight: bold;")
+        c_layout.addWidget(adv_lbl)
+        
+        adv_grid = QGridLayout()
+        adv_grid.setSpacing(10)
+        
+        self.color_buttons = {} # key -> QPushButton
+        
+        color_props = [
+            ("Background", "bg_main"),
+            ("Cards", "card_bg"),
+            ("Text", "text_main"),
+            ("Accent", "primary"),
+            ("Sidebar", "bg_nav")
+        ]
+        
+        for i, (name, key) in enumerate(color_props):
+            lbl = QLabel(name)
+            lbl.setObjectName("SectionHeader")
+            btn = QPushButton()
+            btn.setFixedSize(30, 30)
+            btn.setCursor(Qt.PointingHandCursor)
+            
+            # Connect using closure
+            btn.clicked.connect(lambda checked=False, k=key: self.pick_custom_color(k))
+            
+            row = i // 2
+            col = (i % 2) * 2
+            adv_grid.addWidget(lbl, row, col)
+            adv_grid.addWidget(btn, row, col + 1)
+            
+            self.color_buttons[key] = btn
+            
+        c_layout.addLayout(adv_grid)
+        
         right_col.addWidget(self.custom_box)
+        
+        # --- Danger Zone ---
+        danger_lbl = QLabel("Delete All Data")
+        danger_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        danger_lbl.setObjectName("DangerHeader")
+        right_col.addWidget(danger_lbl)
+        
+        self.danger_box = QFrame()
+        self.danger_box.setObjectName("DangerBox")
+        
+        danger_layout = QVBoxLayout(self.danger_box)
+        danger_layout.setSpacing(10)
+        danger_layout.setContentsMargins(15, 15, 15, 15)
+        
+        danger_desc = QLabel("Permanently delete all tracked data, settings, and apps. This cannot be undone.")
+        danger_desc.setWordWrap(True)
+        danger_layout.addWidget(danger_desc)
+        
+        self.reset_data_btn = QPushButton("Reset All Data")
+        self.reset_data_btn.setCursor(Qt.PointingHandCursor)
+        self.reset_data_btn.setObjectName("DangerButton")
+        self.reset_data_btn.clicked.connect(self.on_reset_data_clicked)
+        
+        reset_btn_layout = QHBoxLayout()
+        reset_btn_layout.addStretch()
+        reset_btn_layout.addWidget(self.reset_data_btn)
+        danger_layout.addLayout(reset_btn_layout)
+        
+        right_col.addWidget(self.danger_box)
         
         content_layout.addLayout(right_col, 1) # Equal Width
         
@@ -385,6 +493,7 @@ class SettingsWidget(QWidget):
 
         # Load State
         self.load_settings()
+        self.update_color_buttons()
         
         # Connect combo change
         self.daily_logs_combo.currentIndexChanged.connect(self.on_combo_changed)
@@ -446,7 +555,7 @@ class SettingsWidget(QWidget):
                      icon_lbl.setText("🌲") # Distinct icon for IRL
                  else:
                      icon_lbl.setText("🔹")
-                 icon_lbl.setStyleSheet("color: #5865F2; font-size: 14px;")
+                 icon_lbl.setStyleSheet("font-size: 14px;")
 
             row_layout.addWidget(icon_lbl)
             
@@ -457,14 +566,14 @@ class SettingsWidget(QWidget):
             clean_name = clean_name.replace("_", " ").title()
             
             lbl = QLabel(clean_name)
-            lbl.setStyleSheet("color: #ddd; font-size: 13px; margin-left: 5px;")
+            lbl.setStyleSheet("font-size: 13px; margin-left: 5px; background: transparent; border: none;")
             row_layout.addWidget(lbl)
             
             # Add IRL Tag
             if app.type == 'irl':
                  tag = QLabel("IRL")
                  tag.setFont(QFont("Segoe UI", 8, QFont.Bold))
-                 tag.setStyleSheet("background-color: #3e3e3e; color: #aaa; padding: 2px 4px; border-radius: 3px; margin-left: 5px;")
+                 tag.setObjectName("IRLTag")
                  row_layout.addWidget(tag)
             
             row_layout.addStretch()
@@ -528,5 +637,168 @@ class SettingsWidget(QWidget):
             else:
                 widget.setVisible(False)
 
+    def set_theme_callback(self, callback):
+        self.apply_theme_callback = callback
+
+    def update_color_buttons(self):
+        from src.ui.styles import themes_dir
+        import os, json
+        
+        main_theme_path = os.path.join(themes_dir, "theme.json")
+        t = {}
+        if os.path.exists(main_theme_path):
+            with open(main_theme_path, 'r', encoding='utf-8') as f:
+                try:
+                    t = json.load(f)
+                except: pass
+                
+        for key, btn in self.color_buttons.items():
+            color = t.get(key, "#ffffff")
+            btn.setStyleSheet(f"background-color: {color}; border: 1px solid #555; border-radius: 4px;")
+
+    def pick_custom_color(self, key):
+        from src.ui.styles import themes_dir
+        import os, json
+        
+        main_theme_path = os.path.join(themes_dir, "theme.json")
+        t = {}
+        if os.path.exists(main_theme_path):
+            with open(main_theme_path, 'r', encoding='utf-8') as f:
+                try:
+                    t = json.load(f)
+                except: pass
+                
+        current_color = t.get(key, "#ffffff")
+        
+        color = QColorDialog.getColor(QColor(current_color), self, f"Select Color")
+        if color.isValid():
+            new_hex = color.name()
+            t[key] = new_hex
+            
+            # Sync related text/accent variables if the master color was chosen
+            if key == "text_main":
+                r, g, b = color.red(), color.green(), color.blue()
+                # Qt Stylesheets heavily favor #AARRGGBB or solid #RRGGBB.
+                # 65% of 255 is ~165 (0xA5)
+                secondary_hex = f"#a5{r:02x}{g:02x}{b:02x}"
+                t["text_secondary"] = secondary_hex
+                t["nav_text"] = secondary_hex
+                
+            if key == "primary":
+                r, g, b = color.red(), color.green(), color.blue()
+                r = max(0, int(r * 0.8))
+                g = max(0, int(g * 0.8))
+                b = max(0, int(b * 0.8))
+                t["primary_hover"] = f"#{r:02x}{g:02x}{b:02x}"
+                
+            if key == "bg_main":
+                r, g, b = color.red(), color.green(), color.blue()
+                # Determine if it's a light or dark theme based on perceived brightness
+                brightness = (r * 0.299 + g * 0.587 + b * 0.114)
+                if brightness > 128:
+                    # Light theme -> bg slightly darker for inputs (e.g. from f0f0f0 -> e0e0e0)
+                    r_i = max(0, int(r * 0.95))
+                    g_i = max(0, int(g * 0.95))
+                    b_i = max(0, int(b * 0.95))
+                else:
+                    # Dark theme -> bg slightly lighter for inputs (e.g. from 1e1e1e -> 2d2d2d)
+                    r_i = min(255, int(r * 1.5) if r > 0 else 30)
+                    g_i = min(255, int(g * 1.5) if g > 0 else 30)
+                    b_i = min(255, int(b * 1.5) if b > 0 else 30)
+                
+                t["input_bg"] = f"#{r_i:02x}{g_i:02x}{b_i:02x}"
+                t["card_bg"] = f"#{r_i:02x}{g_i:02x}{b_i:02x}"
+                
+            if key == "bg_nav":
+                r, g, b = color.red(), color.green(), color.blue()
+                brightness = (r * 0.299 + g * 0.587 + b * 0.114)
+                if brightness > 128:
+                    # Light nav -> hover slightly darker
+                    r_h = max(0, int(r * 0.95))
+                    g_h = max(0, int(g * 0.95))
+                    b_h = max(0, int(b * 0.95))
+                else:
+                    # Dark nav -> hover slightly lighter
+                    r_h = min(255, int(r * 1.5) if r > 0 else 30)
+                    g_h = min(255, int(g * 1.5) if g > 0 else 30)
+                    b_h = min(255, int(b * 1.5) if b > 0 else 30)
+                
+                t["nav_hover"] = f"#{r_h:02x}{g_h:02x}{b_h:02x}"
+            
+            try:
+                with open(main_theme_path, 'w', encoding='utf-8') as f:
+                    json.dump(t, f, indent=4)
+            except Exception as e:
+                print(f"Failed to save color: {e}")
+                
+            self.update_color_buttons()
+            
+            # Apply instantly
+            if hasattr(self, 'apply_theme_callback') and self.apply_theme_callback:
+                self.apply_theme_callback("theme")
+
+    def on_theme_changed(self, theme_name):
+        # Write to main theme.json
+        from src.ui.styles import THEMES, themes_dir
+        import json
+        import os
+        
+        target_theme_data = THEMES.get(theme_name)
+        if target_theme_data:
+            main_theme_path = os.path.join(themes_dir, "theme.json")
+            try:
+                with open(main_theme_path, 'w', encoding='utf-8') as f:
+                    json.dump(target_theme_data, f, indent=4)
+            except Exception as e:
+                print(f"Failed to write to theme.json: {e}")
+
+        # Save to DB (optional now that theme.json drives it, but good for record)
+        self.db.set_setting("theme", theme_name)
+        
+        self.update_color_buttons()
+        
+        # Apply instantly
+        if hasattr(self, 'apply_theme_callback') and self.apply_theme_callback:
+            self.apply_theme_callback("theme")
+
     def refresh(self):
         self.load_settings()
+
+    def on_reset_data_clicked(self):
+        from PySide6.QtWidgets import QMessageBox, QApplication
+        import shutil
+        import os
+
+        dialog = ResetDataDialog(self)
+        if dialog.exec():
+            # User confirmed
+            
+            # 1. Stop Tracker safely
+            if self.tracker:
+                self.tracker.stop()
+
+            # 2. Wipe DB
+            success = self.db.wipe_data()
+
+            # 3. Wipe Icons
+            icons_dir = os.path.join("assets", "icons")
+            if os.path.exists(icons_dir):
+                try:
+                    shutil.rmtree(icons_dir)
+                    os.makedirs(icons_dir)
+                except Exception as e:
+                    print(f"Error clearing icons: {e}")
+
+            if success:
+                QMessageBox.information(
+                    self, 
+                    "Reset Complete", 
+                    "All data has been deleted. Gainhour will now close.\n\nPlease restart the application for a fresh start."
+                )
+                QApplication.quit()
+            else:
+                QMessageBox.critical(
+                    self,
+                    "Reset Failed",
+                    "An error occurred while wiping the database. Please check the logs."
+                )

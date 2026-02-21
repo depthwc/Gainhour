@@ -511,3 +511,23 @@ class StorageManager:
             return result
         finally:
             session.close()
+
+    def wipe_data(self):
+        """Hard resets the database by wiping all tables."""
+        session = self.get_session()
+        try:
+            from src.database.models import Activity, ActivityLog, ActivityDescriptionLog, Setting
+            # Clear logs first due to foreign keys
+            session.query(ActivityDescriptionLog).delete()
+            session.query(ActivityLog).delete()
+            session.query(Activity).delete()
+            session.query(Setting).delete()
+            session.commit()
+            print("Database wiped successfully.")
+            return True
+        except Exception as e:
+            print(f"Error wiping database: {e}")
+            session.rollback()
+            return False
+        finally:
+            session.close()

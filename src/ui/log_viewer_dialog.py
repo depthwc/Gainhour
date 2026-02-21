@@ -7,6 +7,8 @@ from datetime import datetime
 
 from src.utils.text_utils import format_app_name
 
+from src.ui.styles import get_stylesheet
+
 class LogViewerDialog(QDialog):
     def __init__(self, activity, db, icon_manager, parent=None):
         super().__init__(parent)
@@ -18,43 +20,7 @@ class LogViewerDialog(QDialog):
         
         self.setWindowTitle(f"Activity Logs - {formatted_name}")
         self.setFixedSize(900, 600)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QLabel {
-                color: #ffffff;
-            }
-            QTabWidget::pane {
-                border: 1px solid #3e3e3e;
-                background-color: #252526;
-            }
-            QTabBar::tab {
-                background-color: #2d2d30;
-                color: #cccccc;
-                padding: 8px 20px;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }
-            QTabBar::tab:selected {
-                background-color: #3e3e3e;
-                color: #ffffff;
-                font-weight: bold;
-            }
-            QTableWidget {
-                background-color: #252526;
-                color: #dddddd;
-                gridline-color: #3e3e3e;
-                border: none;
-            }
-            QHeaderView::section {
-                background-color: #2d2d30;
-                color: #ffffff;
-                padding: 5px;
-                border: 1px solid #3e3e3e;
-            }
-        """)
+        self.setStyleSheet(get_stylesheet("theme"))
 
         layout = QVBoxLayout(self)
         layout.setSpacing(20)
@@ -95,7 +61,8 @@ class LogViewerDialog(QDialog):
         h, r = divmod(total_duration, 3600)
         m, _ = divmod(r, 60)
         total_lbl = QLabel(f"Total: {int(h)}h {int(m)}m")
-        total_lbl.setStyleSheet("font-size: 14px; color: #aaaaaa;")
+        total_lbl.setObjectName("SectionHeader")
+        total_lbl.setStyleSheet("font-size: 14px;")
         stats_layout.addWidget(total_lbl)
         
         # Today Duration
@@ -103,7 +70,7 @@ class LogViewerDialog(QDialog):
         th, tr = divmod(today_duration, 3600)
         tm, _ = divmod(tr, 60)
         today_lbl = QLabel(f"Today: {int(th)}h {int(tm)}m")
-        today_lbl.setStyleSheet("font-size: 14px; color: #e0e0e0; font-weight: bold;")
+        today_lbl.setStyleSheet("font-size: 14px; font-weight: bold;")
         stats_layout.addWidget(today_lbl)
         
         stats_layout.addStretch()
@@ -133,18 +100,7 @@ class LogViewerDialog(QDialog):
         close_btn = QPushButton("Close")
         close_btn.setFixedSize(100, 35)
         close_btn.setCursor(Qt.PointingHandCursor)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3e3e3e;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #4e4e4e;
-            }
-        """)
+        close_btn.setObjectName("SecondaryButton")
         close_btn.clicked.connect(self.accept)
         
         btn_layout = QHBoxLayout()

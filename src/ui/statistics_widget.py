@@ -38,7 +38,7 @@ class ScrollableCanvas(FigureCanvas):
 class LifetimeStackedChart(QFrame):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet("background: transparent; border: none;")
+        self.setStyleSheet("background: transparent;")
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
         
@@ -51,11 +51,9 @@ class LifetimeStackedChart(QFrame):
             QScrollArea { background: transparent; }
             QScrollBar:horizontal {
                 height: 8px;
-                background: #2b2b2b;
                 border-radius: 4px;
             }
             QScrollBar::handle:horizontal {
-                background: #444;
                 border-radius: 4px;
             }
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
@@ -71,7 +69,7 @@ class LifetimeStackedChart(QFrame):
         self.chart_layout.setAlignment(Qt.AlignLeft)
         
         self.figure, self.ax = plt.subplots(figsize=(5, 3.5), dpi=90)
-        self.figure.patch.set_facecolor('#252526')
+        self.figure.patch.set_alpha(0.0)
         self.canvas = ScrollableCanvas(self.figure, self.chart_scroll)
         self.canvas.setStyleSheet("background-color: transparent;")
         
@@ -98,10 +96,10 @@ class LifetimeStackedChart(QFrame):
 
     def update_data(self, daily_breakdown):
         self.ax.clear()
-        self.ax.set_facecolor('#252526')
+        self.ax.set_facecolor('none')
         
         if not daily_breakdown:
-            self.ax.text(0.5, 0.5, "No Data", color='#666', ha='center', va='center')
+            self.ax.text(0.5, 0.5, "No Data", color='gray', ha='center', va='center')
             self.canvas.draw()
             return
             
@@ -160,19 +158,29 @@ class LifetimeStackedChart(QFrame):
             for j in range(len(bottoms)):
                 bottoms[j] += values[j]
         
+        # Fetch text color from theme
+        text_color = "#e0e0e0"
+        try:
+            from src.ui.styles import themes_dir
+            import os, json
+            tp = os.path.join(themes_dir, "theme.json")
+            if os.path.exists(tp):
+                with open(tp, 'r', encoding='utf-8') as f:
+                    t = json.load(f)
+                    text_color = t.get('text_main', text_color)
+        except: pass
+        
         self.ax.set_xticks(x)
-        self.ax.set_xticklabels(date_labels, rotation=45, ha='right', color='#aaaaaa', fontsize=8)
-        # Horizontal labels, centered
-        self.ax.set_xticklabels(date_labels, rotation=0, ha='center', color='#aaaaaa', fontsize=8)
-        self.ax.tick_params(axis='y', colors='#aaaaaa', labelsize=8)
-        self.ax.set_ylabel("Hours", color='#aaaaaa', fontsize=9)
+        self.ax.set_xticklabels(date_labels, rotation=0, ha='center', fontsize=8, color=text_color)
+        self.ax.tick_params(axis='y', labelsize=8, colors=text_color)
+        self.ax.set_ylabel("Hours", fontsize=9, color=text_color)
         
         # Styling
         self.ax.spines['top'].set_visible(False)
         self.ax.spines['right'].set_visible(False)
-        self.ax.spines['left'].set_color('#444')
-        self.ax.spines['bottom'].set_color('#444')
-        self.ax.grid(axis='y', linestyle='--', alpha=0.3, color='#444')
+        self.ax.spines['bottom'].set_color(text_color)
+        self.ax.spines['left'].set_color(text_color)
+        self.ax.grid(axis='y', linestyle='--', alpha=0.3)
         
         # Dynamic Width
         # Increase width significantly to fit "Feb 17, 2026" horizontally without overlap
@@ -198,15 +206,7 @@ class LifetimeStackedChart(QFrame):
              total_seconds = activity_totals[activity]
              
              row = QFrame()
-             row.setStyleSheet("""
-                QFrame {
-                    background-color: #2b2b2b;
-                    border-radius: 6px;
-                }
-                QFrame:hover {
-                    background-color: #333333;
-                }
-             """)
+             row.setObjectName("ActivityCard")
              row.setFixedHeight(35) 
              
              row_layout = QHBoxLayout(row)
@@ -219,7 +219,7 @@ class LifetimeStackedChart(QFrame):
              
              name_lbl = QLabel(format_app_name(activity))
              name_lbl.setFont(QFont("Segoe UI", 9, QFont.Bold)) 
-             name_lbl.setStyleSheet("color: white; background: transparent; border: none;")
+             name_lbl.setStyleSheet("background: transparent; border: none;")
              row_layout.addWidget(name_lbl)
              
              row_layout.addStretch()
@@ -230,7 +230,8 @@ class LifetimeStackedChart(QFrame):
              
              time_lbl = QLabel(time_str)
              time_lbl.setFont(QFont("Segoe UI", 9))
-             time_lbl.setStyleSheet("color: #cccccc; background: transparent; border: none;")
+             time_lbl.setObjectName("SectionHeader")
+             time_lbl.setStyleSheet("background: transparent; border: none;")
              row_layout.addWidget(time_lbl)
              
              self.list_layout.addWidget(row)
@@ -239,7 +240,7 @@ class StatsPanel(QFrame):
     """Reusable panel for displaying a Chart + List."""
     def __init__(self, title=""):
         super().__init__()
-        self.setStyleSheet("background: transparent; border: none;")
+        self.setStyleSheet("background: transparent;")
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -255,11 +256,9 @@ class StatsPanel(QFrame):
             QScrollArea { background: transparent; }
             QScrollBar:horizontal {
                 height: 8px;
-                background: #2b2b2b;
                 border-radius: 4px;
             }
             QScrollBar::handle:horizontal {
-                background: #444;
                 border-radius: 4px;
             }
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
@@ -276,7 +275,7 @@ class StatsPanel(QFrame):
         self.chart_layout.setAlignment(Qt.AlignLeft) 
         
         self.figure, self.ax = plt.subplots(figsize=(5, 2.8), dpi=90) 
-        self.figure.patch.set_facecolor('#252526')
+        self.figure.patch.set_alpha(0.0)
         self.canvas = ScrollableCanvas(self.figure, self.chart_scroll)
         self.canvas.setStyleSheet("background-color: transparent;")
         
@@ -302,8 +301,8 @@ class StatsPanel(QFrame):
 
     def update_data(self, stats):
         self.ax.clear()
-        self.ax.set_facecolor('#252526')
-        self.figure.patch.set_facecolor('#252526')
+        self.ax.set_facecolor('none')
+        self.figure.patch.set_alpha(0.0)
         
         self.figure.subplots_adjust(bottom=0.1, top=0.95, left=0.1, right=0.95)
         
@@ -313,7 +312,7 @@ class StatsPanel(QFrame):
         if not chart_stats:
             self.ax.text(0.5, 0.5, "No Data", 
                          horizontalalignment='center', verticalalignment='center',
-                         color='#666666', fontsize=12)
+                         color='gray', fontsize=12)
             self.canvas.draw()
             self._fill_list([], [])
             return
@@ -340,16 +339,28 @@ class StatsPanel(QFrame):
         
         bars = self.ax.bar(range(len(values)), values, color=bar_colors, width=0.7)
         
+        # Fetch text color from theme
+        text_color = "#e0e0e0"
+        try:
+            from src.ui.styles import themes_dir, FALLBACK_THEME
+            import os, json
+            tp = os.path.join(themes_dir, "theme.json")
+            if os.path.exists(tp):
+                with open(tp, 'r', encoding='utf-8') as f:
+                    t = json.load(f)
+                    text_color = t.get('text_main', text_color)
+        except: pass
+
         self.ax.set_xticks([]) 
-        self.ax.tick_params(axis='y', colors='#aaaaaa', labelsize=7)
+        self.ax.tick_params(axis='y', labelsize=7, colors=text_color)
         
         self.ax.spines['top'].set_visible(False)
         self.ax.spines['right'].set_visible(False)
-        self.ax.spines['left'].set_color('#444')
-        self.ax.spines['bottom'].set_color('#444')
+        self.ax.spines['bottom'].set_color(text_color)
+        self.ax.spines['left'].set_color(text_color)
         
-        self.ax.grid(axis='y', linestyle='--', alpha=0.3, color='#444')
-        self.ax.set_ylabel(unit, color='#aaaaaa', fontsize=8)
+        self.ax.grid(axis='y', linestyle='--', alpha=0.3)
+        self.ax.set_ylabel(unit, fontsize=8, color=text_color)
         
         num_bars = len(values)
         # Increased width per bar to prevent squeezing and enable scrolling
@@ -372,15 +383,7 @@ class StatsPanel(QFrame):
              color = colors[i] if i < len(colors) else '#cccccc'
              
              row = QFrame()
-             row.setStyleSheet("""
-                QFrame {
-                    background-color: #2b2b2b;
-                    border-radius: 6px;
-                }
-                QFrame:hover {
-                    background-color: #333333;
-                }
-             """)
+             row.setObjectName("ActivityCard")
              row.setFixedHeight(35) 
              
              row_layout = QHBoxLayout(row)
@@ -393,7 +396,7 @@ class StatsPanel(QFrame):
              
              name_lbl = QLabel(format_app_name(s['name']))
              name_lbl.setFont(QFont("Segoe UI", 9, QFont.Bold)) 
-             name_lbl.setStyleSheet("color: white; background: transparent; border: none;")
+             name_lbl.setStyleSheet("background: transparent; border: none;")
              row_layout.addWidget(name_lbl)
              
              row_layout.addStretch()
@@ -404,7 +407,8 @@ class StatsPanel(QFrame):
              
              time_lbl = QLabel(time_str)
              time_lbl.setFont(QFont("Segoe UI", 9))
-             time_lbl.setStyleSheet("color: #cccccc; background: transparent; border: none;")
+             time_lbl.setObjectName("SectionHeader")
+             time_lbl.setStyleSheet("background: transparent; border: none;")
              row_layout.addWidget(time_lbl)
              
              self.list_layout.addWidget(row)
@@ -424,8 +428,8 @@ class ClusteredColumnChart(QFrame):
         self.chart_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.chart_scroll.setStyleSheet("""
             QScrollArea { background: transparent; }
-            QScrollBar:horizontal { height: 8px; background: #2b2b2b; border-radius: 4px; }
-            QScrollBar::handle:horizontal { background: #444; border-radius: 4px; }
+            QScrollBar:horizontal { height: 8px; border-radius: 4px; }
+            QScrollBar::handle:horizontal { border-radius: 4px; }
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { background: none; }
         """)
         self.chart_scroll.setFixedHeight(300)
@@ -437,7 +441,7 @@ class ClusteredColumnChart(QFrame):
         self.chart_layout.setAlignment(Qt.AlignLeft)
         
         self.figure, self.ax = plt.subplots(figsize=(5, 3.5), dpi=90)
-        self.figure.patch.set_facecolor('#252526')
+        self.figure.patch.set_alpha(0.0)
         self.canvas = ScrollableCanvas(self.figure, self.chart_scroll)
         self.canvas.setStyleSheet("background-color: transparent;")
         
@@ -447,10 +451,22 @@ class ClusteredColumnChart(QFrame):
 
     def update_data(self, daily_breakdown, groups, group_colors):
         self.ax.clear()
-        self.ax.set_facecolor('#252526')
+        self.ax.set_facecolor('none')
         
+        # Fetch text color from theme
+        text_color = "#e0e0e0"
+        try:
+            from src.ui.styles import themes_dir
+            import os, json
+            tp = os.path.join(themes_dir, "theme.json")
+            if os.path.exists(tp):
+                with open(tp, 'r', encoding='utf-8') as f:
+                    t = json.load(f)
+                    text_color = t.get('text_main', text_color)
+        except: pass
+
         if not daily_breakdown or not any(groups):
-            self.ax.text(0.5, 0.5, "No Data or Groups Selected", color='#666', ha='center', va='center')
+            self.ax.text(0.5, 0.5, "No Data or Groups Selected", color=text_color, ha='center', va='center')
             self.canvas.draw()
             return
             
@@ -501,15 +517,15 @@ class ClusteredColumnChart(QFrame):
             self.ax.bar(x_pos, values, width=bar_width, color=group_colors[i], linewidth=0)
             
         self.ax.set_xticks(list(x))
-        self.ax.set_xticklabels(date_labels, rotation=0, ha='center', color='#aaaaaa', fontsize=8)
-        self.ax.tick_params(axis='y', colors='#aaaaaa', labelsize=8)
-        self.ax.set_ylabel(unit_label, color='#aaaaaa', fontsize=9)
+        self.ax.set_xticklabels(date_labels, rotation=0, ha='center', fontsize=8, color=text_color)
+        self.ax.tick_params(axis='y', labelsize=8, colors=text_color)
+        self.ax.set_ylabel(unit_label, fontsize=9, color=text_color)
         
         self.ax.spines['top'].set_visible(False)
         self.ax.spines['right'].set_visible(False)
-        self.ax.spines['left'].set_color('#444')
-        self.ax.spines['bottom'].set_color('#444')
-        self.ax.grid(axis='y', linestyle='--', alpha=0.3, color='#444')
+        self.ax.spines['bottom'].set_color(text_color)
+        self.ax.spines['left'].set_color(text_color)
+        self.ax.grid(axis='y', linestyle='--', alpha=0.3)
         
         width_inch = max(6, len(sorted_dates) * max(1.2, bar_width * n_groups * 1.5))
         pixel_width = int(width_inch * 90)
@@ -573,13 +589,7 @@ class StatisticsWidget(QWidget):
 
         # Main Box (Stacked Content)
         self.main_box = QFrame()
-        self.main_box.setStyleSheet("""
-            QFrame#MainBox {
-                background-color: #252526; 
-                border-radius: 10px; 
-                border: 1px solid #3e3e3e;
-            }
-        """)
+        self.main_box.setObjectName("SettingsCard")
         self.main_box.setObjectName("MainBox")
         self.main_box_layout = QVBoxLayout(self.main_box)
         self.main_box_layout.setContentsMargins(15, 15, 15, 15)
@@ -592,15 +602,16 @@ class StatisticsWidget(QWidget):
         self.page_daily_layout.setContentsMargins(0,0,0,0)
         
         self.daily_header = QHBoxLayout()
-        self.btn_prev = self._create_nav_btn("src/icons/prev.png", self.prev_day)
-        self.btn_next = self._create_nav_btn("src/icons/next.png", self.next_day)
+        from src.utils.path_utils import get_resource_path
+        self.btn_prev = self._create_nav_btn(get_resource_path("src/icons/prev.png"), self.prev_day)
+        self.btn_next = self._create_nav_btn(get_resource_path("src/icons/next.png"), self.next_day)
         self.date_lbl = QLabel("Today")
         self.date_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.date_lbl.setStyleSheet("color: white;")
+        self.date_lbl.setStyleSheet("")
         
         self.daily_total_lbl = QLabel("Total: 0h 0m")
         self.daily_total_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.daily_total_lbl.setStyleSheet("color: #cccccc;")
+        self.daily_total_lbl.setObjectName("SectionHeader")
         
         self.daily_header.addWidget(self.btn_prev)
         self.daily_header.addWidget(self.date_lbl)
@@ -620,11 +631,11 @@ class StatisticsWidget(QWidget):
         total_header = QHBoxLayout()
         total_lbl = QLabel("Lifetime Statistics")
         total_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        total_lbl.setStyleSheet("color: white;")
+        total_lbl.setStyleSheet("")
         
         self.lifetime_total_lbl = QLabel("Total: 0h 0m")
         self.lifetime_total_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.lifetime_total_lbl.setStyleSheet("color: #cccccc;")
+        self.lifetime_total_lbl.setObjectName("SectionHeader")
         
         total_header.addWidget(total_lbl)
         total_header.addStretch()
@@ -648,15 +659,11 @@ class StatisticsWidget(QWidget):
         
         self.stacked_header = QLabel("Daily Breakdown (Lifetime)")
         self.stacked_header.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.stacked_header.setStyleSheet("color: white;")
+        self.stacked_header.setStyleSheet("")
         self.right_layout.addWidget(self.stacked_header)
 
         self.right_box = QFrame()
-        self.right_box.setStyleSheet("""
-            background-color: #252526; 
-            border-radius: 10px; 
-            border: 1px solid #3e3e3e;
-        """)
+        self.right_box.setObjectName("SettingsCard")
         self.right_box_layout = QVBoxLayout(self.right_box)
         self.right_box_layout.setContentsMargins(10,10,10,10)
         
@@ -672,11 +679,7 @@ class StatisticsWidget(QWidget):
         
         # === 2. BOTTOM ROW (Full Width) ===
         self.bottom_box = QFrame()
-        self.bottom_box.setStyleSheet("""
-            background-color: #252526; 
-            border-radius: 10px; 
-            border: 1px solid #3e3e3e;
-        """)
+        self.bottom_box.setObjectName("SettingsCard")
         # We let it expand naturally instead of fixing height
         self.bottom_box_layout = QVBoxLayout(self.bottom_box)
         self.bottom_box_layout.setContentsMargins(15, 15, 15, 15)
@@ -684,7 +687,7 @@ class StatisticsWidget(QWidget):
         
         bottom_header_label = QLabel("Compare Apps")
         bottom_header_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        bottom_header_label.setStyleSheet("color: white;")
+        bottom_header_label.setStyleSheet("")
         self.bottom_box_layout.addWidget(bottom_header_label)
 
         self.groups_layout = QHBoxLayout()
@@ -749,27 +752,43 @@ class StatisticsWidget(QWidget):
         return btn
         
     def _get_tab_style(self, active):
+        # Fetch dynamic theme
+        import json, os
+        from src.ui.styles import themes_dir, FALLBACK_THEME
+        
+        t = FALLBACK_THEME
+        main_theme_path = os.path.join(themes_dir, "theme.json")
+        if os.path.exists(main_theme_path):
+            try:
+                with open(main_theme_path, 'r', encoding='utf-8') as f:
+                    t = json.load(f)
+            except: pass
+            
+        primary = t.get('primary', FALLBACK_THEME['primary'])
+        card_bg = t.get('card_bg', FALLBACK_THEME['card_bg'])
+        border  = t.get('border', FALLBACK_THEME['border'])
+        text    = t.get('text_secondary', FALLBACK_THEME['text_secondary'])
+        
         if active:
-            return """
-                QPushButton {
-                    background-color: #5865F2; 
+            return f"""
+                QPushButton {{
+                    background-color: {primary}; 
                     color: white; 
                     border: none; 
                     border-radius: 6px;
-                }
+                }}
             """
         else:
-            return """
-                QPushButton {
-                    background-color: #2b2b2b; 
-                    color: #aaaaaa; 
-                    border: 1px solid #3e3e3e; 
+            return f"""
+                QPushButton {{
+                    background-color: {card_bg}; 
+                    color: {text}; 
+                    border: 1px solid {border}; 
                     border-radius: 6px;
-                }
-                QPushButton:hover {
-                    background-color: #333333;
-                    color: white;
-                }
+                }}
+                QPushButton:hover {{
+                    border: 1px solid {primary};
+                }}
             """
 
     def _create_nav_btn(self, icon_path, callback):
@@ -778,18 +797,8 @@ class StatisticsWidget(QWidget):
         btn.setIconSize(QSize(20, 20))
         btn.setFixedSize(30, 30)
         btn.setCursor(Qt.PointingHandCursor)
+        btn.setObjectName("CircleNavButton")
         btn.clicked.connect(callback)
-        btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: 1px solid #444;
-                border-radius: 15px;
-            }
-            QPushButton:hover {
-                background-color: #333;
-                border-color: #666;
-            }
-        """)
         return btn
 
     def prev_day(self):

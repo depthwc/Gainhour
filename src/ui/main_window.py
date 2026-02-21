@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QSystemTrayIcon, QMenu, QApplication)
 from PySide6.QtCore import Qt, QTimer, QSize
 from PySide6.QtGui import QIcon, QFont, QAction, QPixmap
-from src.ui.styles import STYLESHEET
+from src.ui.styles import get_stylesheet
 
 from src.database.storage import StorageManager
 from src.core.tracker import Tracker
@@ -22,15 +22,20 @@ class MainWindow(QMainWindow):
         # Start maximized or large
         self.resize(1400, 900)
         
+        from src.utils.path_utils import get_resource_path, get_db_path
+        
         # Setup Core
-        self.db = StorageManager("gainhour.db")
+        db_file = get_db_path("gainhour.db")
+        self.db = StorageManager(db_file)
         self.db.clean_explorer_data()
         self.icon_manager = IconManager()
         self.tracker = Tracker(self.db, self.icon_manager)
         self.tracker.start()
 
         # Apply Unified Theme
-        self.setStyleSheet(STYLESHEET)
+        # We now rely primarily on the dynamic theme.json 
+        self.db.get_setting("theme", "night") # Get to ensure it exists, but we pass "theme" so styles.py resolves theme.json
+        QApplication.instance().setStyleSheet(get_stylesheet("theme"))
 
         # Central Widget & Layout
         central_widget = QWidget()
@@ -52,6 +57,7 @@ class MainWindow(QMainWindow):
         self.activities_widget = ActivitiesWidget(self.db, self.tracker, self.icon_manager)
         self.statistics_widget = StatisticsWidget(self.db, self.tracker)
         self.settings_widget = SettingsWidget(self.db, self.tracker)
+        self.settings_widget.set_theme_callback(self.apply_theme)
         
         self.stack.addWidget(self.home_widget)
         self.stack.addWidget(self.activities_widget)
@@ -80,7 +86,7 @@ class MainWindow(QMainWindow):
         title.setFont(QFont("Segoe UI", 14, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         title.setFixedHeight(80)
-        title.setStyleSheet("color: white; letter-spacing: 2px;")
+        title.setObjectName("SectionHeader")
         layout.addWidget(title)
         
         # Buttons
@@ -127,8 +133,10 @@ class MainWindow(QMainWindow):
         self.tray_icon = QSystemTrayIcon(self)
         
         # Icon
-        if os.path.exists("gainhour.ico"):
-            self.tray_icon.setIcon(QIcon("gainhour.ico"))
+        from src.utils.path_utils import get_resource_path
+        icon_path = get_resource_path("gainhour.ico")
+        if os.path.exists(icon_path):
+            self.tray_icon.setIcon(QIcon(icon_path))
         else:
              # Fallback 
              pass
@@ -177,3 +185,6 @@ class MainWindow(QMainWindow):
         else:
             self.tracker.stop()
             event.accept()
+
+    def apply_theme(self, theme_name):
+        QApplication.instance().setStyleSheet(get_stylesheet(theme_name))
