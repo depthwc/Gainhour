@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QMessageBox
 import os
 import time
 
-from src.core.window_watcher import get_open_windows
+from PySide6.QtCore import Qt, QTimer, QSize, Signal
 from src.ui.add_activity_dialog import AddActivityDialog
 
 from src.utils.text_utils import format_app_name
@@ -787,17 +787,15 @@ class HomeWidget(QWidget):
                 'name': a.name, 'type': a.type, 'icon': a.icon_path, 'is_irl': a.type == 'irl'
             }
             
-        # Open Windows
-        windows = get_open_windows()
-        for w in windows:
-            name = w['process_name']
+        # Open Windows (Read from tracker instead of blocking UI thread)
+        for name, info in self.tracker.open_sessions.items():
             if name not in current_data:
                 current_data[name] = {
-                    'name': name, 'type': 'app', 'icon': w.get('executable_path'), 'is_irl': False
+                    'name': name, 'type': 'app', 'icon': info.get('executable_path'), 'is_irl': False
                 }
             else:
                  if not current_data[name]['icon']:
-                      current_data[name]['icon'] = w.get('executable_path')
+                      current_data[name]['icon'] = info.get('executable_path')
 
         # Filter
         filtered_items = []

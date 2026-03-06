@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, event
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
 import os
@@ -59,7 +59,15 @@ class Setting(Base):
     key = Column(String, primary_key=True)
     value = Column(String)
 
+def _fk_pragma_on_connect(dbapi_con, con_record):
+    # Enable Write-Ahead Logging for concurrent reading/writing
+    cursor = dbapi_con.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
+
 def init_db(db_path="gainhour.db"):
-    engine = create_engine(f'sqlite:///{db_path}')
+    engine = create_engine(f'sqlite:///{db_path}', connect_args={'check_same_thread': False, 'timeout': 15})
+    event.listen(engine, 'connect', _fk_pragma_on_connect)
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)
