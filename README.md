@@ -51,8 +51,12 @@ pyinstaller Gainhour.spec
 - **Statistics Tab:** Visualize your tracked time through daily breakdowns and lifetime charts. Create custom groupings to compare specific apps.
 - **Settings Tab:** Configure startup behavior, manage log history, toggle Discord integration globally, choose UI themes, and manage or reset your underlying database.
 
+##
 - Startup may not work. In that case just move it into Startup
 
 - U can change defoult themes in \themes folder
 
 - Default ignored apps can be modified in \core\tracker.py line 30 ```self.ignored_apps = {"explorer.exe", "SearchApp.exe", "ShellExperienceHost.exe"}```
+
+### License
+- This project is licensed under the MIT License - LICENSE.txt
