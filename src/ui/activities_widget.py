@@ -19,25 +19,24 @@ class ActivityCard(QFrame):
         self.db = db
         self.icon_manager = icon_manager
         
-        # Flexible size, slightly more compact height
+
         self.setFixedSize(280, 160) 
         self.setObjectName("ActivityCard")
         
-        # Premium Card Style inherited globally
-        
+    
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 12, 15, 12)
         self.layout.setSpacing(8)
         
-        # --- Header ---
+
         header = QHBoxLayout()
         header.setSpacing(12)
         
-        # Icon
+
         self.icon_lbl = QLabel()
         self.icon_lbl.setFixedSize(40, 40)
         
-        # Resolve Path
+
         icon_path = activity.icon_path
         if icon_path and not os.path.isabs(icon_path):
              base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -56,17 +55,17 @@ class ActivityCard(QFrame):
              
         header.addWidget(self.icon_lbl)
         
-        # Titles & Badge
+
         titles = QVBoxLayout()
         titles.setSpacing(2)
-        titles.setContentsMargins(0, 0, 0, 0) # Tight
+        titles.setContentsMargins(0, 0, 0, 0) 
 
-        # Name
+
         name_lbl = QLabel(self.formatted_name)
         name_lbl.setFont(QFont("Segoe UI", 11, QFont.Bold))
         titles.addWidget(name_lbl)
         
-        # Type Badge (Small Pill)
+
         badge_layout = QHBoxLayout()
         badge_layout.setSpacing(0)
         badge_layout.setContentsMargins(0,0,0,0)
@@ -83,11 +82,11 @@ class ActivityCard(QFrame):
         header.addStretch()
         self.layout.addLayout(header)
         
-        # --- Statistics ---
+
         stats = QHBoxLayout()
         stats.setSpacing(15)
         
-        # Today
+
         today_box = QVBoxLayout()
         today_box.setSpacing(0)
         lbl_t = QLabel("TODAY")
@@ -96,12 +95,12 @@ class ActivityCard(QFrame):
         today_box.addWidget(lbl_t)
         
         self.today_lbl = QLabel("0h 0m")
-        self.today_lbl.setFont(QFont("Segoe UI", 14, QFont.Bold)) # Slightly smaller than before
+        self.today_lbl.setFont(QFont("Segoe UI", 14, QFont.Bold)) 
         self.today_lbl.setObjectName("SectionHeader")
         today_box.addWidget(self.today_lbl)
         stats.addLayout(today_box)
         
-        # Total
+
         total_box = QVBoxLayout()
         total_box.setSpacing(0)
         lbl_tot = QLabel("TOTAL")
@@ -120,7 +119,7 @@ class ActivityCard(QFrame):
         
         self.layout.addStretch()
         
-        # --- Footer (Actions) ---
+
         footer = QHBoxLayout()
         footer.setSpacing(8)
         
@@ -132,7 +131,7 @@ class ActivityCard(QFrame):
         footer.addWidget(self.edit_btn)
         
         self.del_btn = QPushButton("Del🗑")
-        self.del_btn.setFixedSize(65, 26) # Compact
+        self.del_btn.setFixedSize(65, 26) 
         self.del_btn.setCursor(Qt.PointingHandCursor)
         self.del_btn.setToolTip("Delete Activity")
         self.del_btn.setObjectName("DangerCardButton")
@@ -174,7 +173,7 @@ class ActivityCard(QFrame):
         self.total_lbl.setText(f"{int(h)}h {int(m)}m")
 
     def set_running(self, is_running):
-        pass # Button removed
+        pass 
 
 
 
@@ -184,31 +183,31 @@ class ActivitiesWidget(QWidget):
         self.db = db
         self.tracker = tracker
         self.icon_manager = icon_manager
-        self.cards = {} # id -> card
+        self.cards = {} 
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(20)
         
-        # Header
+
         header = QHBoxLayout()
         title = QLabel("Manage Activities")
         title.setFont(QFont("Segoe UI", 20, QFont.Bold))
         header.addWidget(title)
         
         
-        # Controls Row (Search & Filter)
+
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(10)
         
-        # Search
+
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search activities...")
         self.search_input.textChanged.connect(self.on_search_changed)
         self.search_input.setFixedWidth(250)
         controls_layout.addWidget(self.search_input)
         
-        # Filter
+
         self.filter_combo = QComboBox()
         self.filter_combo.addItems(["All Types", "App", "IRL"])
         self.filter_combo.currentTextChanged.connect(self.on_filter_changed)
@@ -219,29 +218,26 @@ class ActivitiesWidget(QWidget):
         
         add_btn = QPushButton("+ Add IRL Activity")
         add_btn.setObjectName("PrimaryButton")
-        add_btn.setMinimumHeight(34) # Slightly smaller to match inputs
+        add_btn.setMinimumHeight(34) 
         add_btn.clicked.connect(self.open_add_dialog)
         controls_layout.addWidget(add_btn)
         
         layout.addLayout(controls_layout)
         
-        # Internal State for Filtering
+
         self.current_search_text = ""
         self.current_filter_type = "All Types"
         
-        # Grid Area
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setStyleSheet("background: transparent;")
         
         self.grid_container = QWidget()
-        # Use FlowLayout instead of GridLayout
+
         self.flow_layout = FlowLayout(self.grid_container, margin=0, spacing=20) 
         
-        # Responsive Grid Logic (FlowLayout handles wrapping automatically)
-        # For a truly responsive grid in PySide6 without resize events is tricky
-        # But we can assume a reasonable number of columns
         
         scroll.setWidget(self.grid_container)
         layout.addWidget(scroll)
@@ -249,8 +245,6 @@ class ActivitiesWidget(QWidget):
         self.refresh()
         
     def refresh(self):
-        # Clear
-        # Layouts don't have a simple clear(), need to remove items manually
         while self.flow_layout.count():
             item = self.flow_layout.takeAt(0)
             if item.widget():
@@ -259,37 +253,22 @@ class ActivitiesWidget(QWidget):
         
         
         all_activities = self.db.get_all_activities()
-        # Filter List
         activities = []
         search_text = self.current_search_text.lower()
         filter_type = self.current_filter_type
         
         for act in all_activities:
-            # 1. Type Filter
             if filter_type == "App" and act.type != "app":
                 continue
-            if filter_type == "IRL" and act.type != "irl": # Assuming 'irl' type in DB or logic
-                 # Check how IRL is stored. 'game' or 'irl'? 
-                 # Card logic uses: color = "#007acc" if activity.type == "app" else "#2fa51f"
-                 # And badge logic: if activity.type == "game" ...
-                 # User calls them "IRL Activity". 
-                 # Let's assume anything NOT 'app' is 'irl'/'game' 
-                 # OR check exact types. 
-                 # Let's check DB/Model. Storage uses 'app' default. 
-                 # Add dialog uses 'game' for IRL? Or 'irl'?
-                 # Let's look at `AddActivityDialog`. 
-                 # It probably saves as 'game' or 'irl'. 
-                 # Previously: `type="irl"` was used in some contexts? 
-                 # Let's assume strict equality for now, but handle 'game' as IRL if that's what it is.
+            if filter_type == "IRL" and act.type != "irl": 
                  pass 
 
-            # Refined Type Filter
+
             if filter_type == "App" and act.type != "app":
                 continue
             if filter_type == "IRL" and act.type == "app":
-                continue # Show everything else (game, irl, etc) as IRL
+                continue 
             
-            # 2. Search Filter
             if search_text and search_text not in act.name.lower():
                 continue
                 
@@ -297,16 +276,14 @@ class ActivitiesWidget(QWidget):
             
         activities.sort(key=lambda x: x.name)
         
-        # Fixed columns
+
         cols = 4 
         for i, act in enumerate(activities):
             card = ActivityCard(act, self.db, self.icon_manager)
             
-            # Connect
-            # card.action_btn.clicked.connect(lambda checked, a=act: self.toggle_activity(a)) # Removed
-            card.logs_btn.clicked.connect(lambda checked, a=act: self.open_logs_dialog(a))    # Added
+            card.logs_btn.clicked.connect(lambda checked, a=act: self.open_logs_dialog(a))   
             card.edit_btn.clicked.connect(lambda checked, a=act: self.open_edit_dialog(a))
-            card.del_btn.clicked.connect(lambda checked, a=act: self.delete_activity_ui(a)) # Wired up
+            card.del_btn.clicked.connect(lambda checked, a=act: self.delete_activity_ui(a)) 
             
             self.flow_layout.addWidget(card)
             self.cards[act.id] = card
@@ -324,7 +301,7 @@ class ActivitiesWidget(QWidget):
         else:
             self.tracker.start_manual_session(activity)
         self.update_states()
-        # Refresh current card stats?
+
         if activity.id in self.cards:
              self.cards[activity.id].update_stats()
 
@@ -355,7 +332,6 @@ class ActivitiesWidget(QWidget):
         if reply == QMessageBox.Yes:
             success = self.db.delete_activity(activity.id)
             if success:
-                # Remove from tracker manually if it's running
                 if self.tracker.is_manual_running(activity.id):
                     self.tracker.stop_manual_session(activity)
                 
@@ -373,9 +349,7 @@ class ActivitiesWidget(QWidget):
         self.refresh()
 
     def update_data(self):
-        # Periodic update
         self.update_states()
-        # Also update stats texts?
         for card in self.cards.values():
             card.update_stats()
 

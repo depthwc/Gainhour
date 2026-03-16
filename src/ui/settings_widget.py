@@ -23,7 +23,6 @@ class ToggleSwitch(QWidget):
         
         self._checked = False
         
-        # Animations
         self._anim = QPropertyAnimation(self, b"thumbPos", self)
         self._anim.setDuration(150)
         self._anim.setEasingCurve(QEasingCurve.InOutQuad)
@@ -35,9 +34,9 @@ class ToggleSwitch(QWidget):
         if self._checked != checked:
             self._checked = checked
             target = self._end_offset if checked else self._base_offset
-            self._thumb_pos = target # No animation for programmatic set (optional)
+            self._thumb_pos = target 
             self.update()
-            # self.toggled.emit(checked) # Usually don't emit on programmatic change unless desired
+
 
     # Signal
     from PySide6.QtCore import Signal
@@ -69,9 +68,8 @@ class ToggleSwitch(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         
-        # Draw Track
-        # Fetch dynamic primary color
-        primary_color = "#5865F2"
+
+        primary_color = "#43697d"
         try:
             from src.ui.styles import themes_dir, FALLBACK_THEME
             import os, json
@@ -87,14 +85,9 @@ class ToggleSwitch(QWidget):
         p.setPen(Qt.NoPen)
         p.drawRoundedRect(0, 0, self.width(), self.height(), self.height() / 2, self.height() / 2)
         
-        # Draw Thumb
         p.setBrush(QColor("white"))
-        # thumb_pos acts as x coordinate
-        # y is centered
         thumb_y = (self.height() - 2 * self._thumb_radius) / 2
         
-        # Fix thumb pos logic: _end_offset needs to be calculated such that circle fits
-        # Circle size = thumb_radius * 2
         
         d = self._thumb_radius * 2
         x = self._thumb_pos
@@ -209,7 +202,7 @@ class SettingsWidget(QWidget):
         content_layout.setSpacing(20)
         content_layout.setAlignment(Qt.AlignTop)
         
-        # --- Left Column (All Current Settings) ---
+        #--
         left_col = QVBoxLayout()
         left_col.setSpacing(20)
         left_col.setAlignment(Qt.AlignTop)
@@ -228,8 +221,6 @@ class SettingsWidget(QWidget):
         
         self.startup_check = QCheckBox("Run on Startup")
         
-        # We will read from DB, but also verify with the registry.
-        # DB will override at load.
         is_startup = check_run_on_startup()
         self.startup_check.setChecked(is_startup)
         
@@ -351,19 +342,19 @@ class SettingsWidget(QWidget):
         
         self.app_list_widget = QWidget()
         self.app_list_layout = QVBoxLayout(self.app_list_widget)
-        self.app_list_layout.setSpacing(10) # More spacing for list items
+        self.app_list_layout.setSpacing(10)
         self.app_list_layout.setContentsMargins(15, 15, 15, 15)
         self.app_scroll.setWidget(self.app_list_widget)
         
         d_layout.addWidget(self.app_scroll)
         
-        self.app_switches = {} # { activity_id: ToggleSwitch }
-        self.app_rows = [] # Store (name, widget) tuples for filtering
+        self.app_switches = {}
+        self.app_rows = []
         
         left_col.addWidget(self.discord_box)
         content_layout.addLayout(left_col, 1) 
         
-        # --- Right Column (Customization Placeholder) ---
+        #-=
         right_col = QVBoxLayout()
         right_col.setSpacing(20)
         right_col.setAlignment(Qt.AlignTop)
@@ -383,7 +374,6 @@ class SettingsWidget(QWidget):
         c_lbl = QLabel("Select Theme:")
         c_layout.addWidget(c_lbl)
         
-        # Theme Buttons Layout
         theme_btn_layout = QHBoxLayout()
         theme_btn_layout.setSpacing(10)
         
@@ -391,8 +381,6 @@ class SettingsWidget(QWidget):
             btn = QPushButton(name)
             btn.setCursor(Qt.PointingHandCursor)
             
-            # Keep basic colors inline since they represent that specific theme's preview,
-            # but don't hardcode other styling that might clash.
             theme_primary = THEMES.get(theme_id, {}).get("primary", "#5865F2")
             btn.setStyleSheet(f"""
                 QPushButton {{
@@ -419,7 +407,6 @@ class SettingsWidget(QWidget):
         
         c_layout.addLayout(theme_btn_layout)
         
-        # --- Advanced Colors ---
         adv_lbl = QLabel("Advanced Colors:")
         adv_lbl.setStyleSheet("margin-top: 10px; font-weight: bold;")
         c_layout.addWidget(adv_lbl)
@@ -427,7 +414,7 @@ class SettingsWidget(QWidget):
         adv_grid = QGridLayout()
         adv_grid.setSpacing(10)
         
-        self.color_buttons = {} # key -> QPushButton
+        self.color_buttons = {}
         
         color_props = [
             ("Background", "bg_main"),
@@ -444,7 +431,6 @@ class SettingsWidget(QWidget):
             btn.setFixedSize(30, 30)
             btn.setCursor(Qt.PointingHandCursor)
             
-            # Connect using closure
             btn.clicked.connect(lambda checked=False, k=key: self.pick_custom_color(k))
             
             row = i // 2
@@ -458,7 +444,6 @@ class SettingsWidget(QWidget):
         
         right_col.addWidget(self.custom_box)
         
-        # --- Danger Zone ---
         danger_lbl = QLabel("Delete All Data")
         danger_lbl.setFont(QFont("Segoe UI", 12, QFont.Bold))
         danger_lbl.setObjectName("DangerHeader")
@@ -487,38 +472,31 @@ class SettingsWidget(QWidget):
         
         right_col.addWidget(self.danger_box)
         
-        content_layout.addLayout(right_col, 1) # Equal Width
+        content_layout.addLayout(right_col, 1)
         
         self.layout.addLayout(content_layout)
 
-        # Load State
         self.load_settings()
         self.update_color_buttons()
         
-        # Connect combo change
         self.daily_logs_combo.currentIndexChanged.connect(self.on_combo_changed)
 
     def load_settings(self):
-        # Daily Logs
         val = self.db.get_setting("daily_logs_only", "False")
         idx = 1 if val == "True" else 0
         self.daily_logs_combo.setCurrentIndex(idx)
         self.warning_lbl.setVisible(idx == 1)
 
-        # Startup Setting
         startup_val = self.db.get_setting("run_on_startup", "False")
-        # Ensure registry matches this database state
         set_run_on_startup(startup_val == "True")
         self.startup_check.setChecked(startup_val == "True")
 
-        # Discord Globals
         discord_val = self.db.get_setting("discord_enabled", "True")
         is_enabled = (discord_val == "True")
         self.discord_enabled_switch.setChecked(is_enabled)
         self.app_scroll.setEnabled(is_enabled)
         self.reconnect_btn.setVisible(is_enabled)
         
-        # Populate App List
         for i in reversed(range(self.app_list_layout.count())): 
             widget = self.app_list_layout.itemAt(i).widget()
             if widget:
@@ -526,23 +504,19 @@ class SettingsWidget(QWidget):
         self.app_switches.clear()
         
         activities = self.db.get_all_activities()
-        # Include both apps and IRL activities
         apps = sorted([a for a in activities if a.type in ('app', 'irl')], key=lambda x: x.name.lower())
         
         self.app_rows = []
         
         for app in apps:
-            # Row Layout for App + Switch
             row = QWidget()
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(0,0,0,0)
             
-            # Icon
             icon_lbl = QLabel()
             icon_lbl.setFixedSize(24, 24)
             icon_lbl.setAlignment(Qt.AlignCenter)
             
-            # Use app.icon_path if available
             has_icon = False
             if app.icon_path:
                  px = QPixmap(app.icon_path)
@@ -552,14 +526,13 @@ class SettingsWidget(QWidget):
             
             if not has_icon:
                  if app.type == 'irl':
-                     icon_lbl.setText("🌲") # Distinct icon for IRL
+                     icon_lbl.setText("🌲")
                  else:
                      icon_lbl.setText("🔹")
                  icon_lbl.setStyleSheet("font-size: 14px;")
 
             row_layout.addWidget(icon_lbl)
             
-            # Clean Name logic: Remove .exe, Title Case
             clean_name = app.name
             if clean_name.lower().endswith(".exe"):
                 clean_name = clean_name[:-4]
@@ -569,7 +542,6 @@ class SettingsWidget(QWidget):
             lbl.setStyleSheet("font-size: 13px; margin-left: 5px; background: transparent; border: none;")
             row_layout.addWidget(lbl)
             
-            # Add IRL Tag
             if app.type == 'irl':
                  tag = QLabel("IRL")
                  tag.setFont(QFont("Segoe UI", 8, QFont.Bold))
@@ -580,7 +552,6 @@ class SettingsWidget(QWidget):
             
             switch = ToggleSwitch()
             switch.setChecked(app.discord_visible)
-            # Store ID in switch or use closure
             switch.toggled.connect(lambda checked, aid=app.id: self.on_app_toggled_auto(aid, checked))
             
             row_layout.addWidget(switch)
@@ -588,32 +559,25 @@ class SettingsWidget(QWidget):
             self.app_list_layout.addWidget(row)
             self.app_switches[app.id] = switch
             
-            # Store for filtering (search matches against clean_name or original name)
             self.app_rows.append((clean_name.lower(), row))
 
     def on_combo_changed(self, index):
         self.warning_lbl.setVisible(index == 1)
 
     def on_discord_toggled_auto(self, checked):
-        # 1. Update UI state
         self.app_scroll.setEnabled(checked)
         self.reconnect_btn.setVisible(checked)
-        # 2. Auto-save to DB
         self.db.set_setting("discord_enabled", "True" if checked else "False")
 
     def on_app_toggled_auto(self, activity_id, checked):
-        # Auto-save app visibility
         self.db.update_activity_visibility(activity_id, checked)
 
     def save_settings(self):
-        # 1. Update Startup
         is_startup = self.startup_check.isChecked()
         self.db.set_setting("run_on_startup", "True" if is_startup else "False")
         
-        # Apply Registry Change immediately
         success = set_run_on_startup(is_startup)
-        
-        # 2. Daily Logs
+
         daily_logs_val = "True" if self.daily_logs_combo.currentIndex() == 1 else "False"
         self.db.set_setting("daily_logs_only", daily_logs_val)
         
@@ -675,11 +639,8 @@ class SettingsWidget(QWidget):
             new_hex = color.name()
             t[key] = new_hex
             
-            # Sync related text/accent variables if the master color was chosen
             if key == "text_main":
                 r, g, b = color.red(), color.green(), color.blue()
-                # Qt Stylesheets heavily favor #AARRGGBB or solid #RRGGBB.
-                # 65% of 255 is ~165 (0xA5)
                 secondary_hex = f"#a5{r:02x}{g:02x}{b:02x}"
                 t["text_secondary"] = secondary_hex
                 t["nav_text"] = secondary_hex
@@ -693,15 +654,12 @@ class SettingsWidget(QWidget):
                 
             if key == "bg_main":
                 r, g, b = color.red(), color.green(), color.blue()
-                # Determine if it's a light or dark theme based on perceived brightness
                 brightness = (r * 0.299 + g * 0.587 + b * 0.114)
                 if brightness > 128:
-                    # Light theme -> bg slightly darker for inputs (e.g. from f0f0f0 -> e0e0e0)
                     r_i = max(0, int(r * 0.95))
                     g_i = max(0, int(g * 0.95))
                     b_i = max(0, int(b * 0.95))
                 else:
-                    # Dark theme -> bg slightly lighter for inputs (e.g. from 1e1e1e -> 2d2d2d)
                     r_i = min(255, int(r * 1.5) if r > 0 else 30)
                     g_i = min(255, int(g * 1.5) if g > 0 else 30)
                     b_i = min(255, int(b * 1.5) if b > 0 else 30)
@@ -713,12 +671,10 @@ class SettingsWidget(QWidget):
                 r, g, b = color.red(), color.green(), color.blue()
                 brightness = (r * 0.299 + g * 0.587 + b * 0.114)
                 if brightness > 128:
-                    # Light nav -> hover slightly darker
                     r_h = max(0, int(r * 0.95))
                     g_h = max(0, int(g * 0.95))
                     b_h = max(0, int(b * 0.95))
                 else:
-                    # Dark nav -> hover slightly lighter
                     r_h = min(255, int(r * 1.5) if r > 0 else 30)
                     g_h = min(255, int(g * 1.5) if g > 0 else 30)
                     b_h = min(255, int(b * 1.5) if b > 0 else 30)
@@ -733,12 +689,10 @@ class SettingsWidget(QWidget):
                 
             self.update_color_buttons()
             
-            # Apply instantly
             if hasattr(self, 'apply_theme_callback') and self.apply_theme_callback:
                 self.apply_theme_callback("theme")
 
     def on_theme_changed(self, theme_name):
-        # Write to main theme.json
         from src.ui.styles import THEMES, themes_dir
         import json
         import os
@@ -752,12 +706,10 @@ class SettingsWidget(QWidget):
             except Exception as e:
                 print(f"Failed to write to theme.json: {e}")
 
-        # Save to DB (optional now that theme.json drives it, but good for record)
         self.db.set_setting("theme", theme_name)
         
         self.update_color_buttons()
         
-        # Apply instantly
         if hasattr(self, 'apply_theme_callback') and self.apply_theme_callback:
             self.apply_theme_callback("theme")
 
@@ -771,16 +723,15 @@ class SettingsWidget(QWidget):
 
         dialog = ResetDataDialog(self)
         if dialog.exec():
-            # User confirmed
             
-            # 1. Stop Tracker safely
+
             if self.tracker:
                 self.tracker.stop()
 
-            # 2. Wipe DB
+
             success = self.db.wipe_data()
 
-            # 3. Wipe Icons
+
             icons_dir = os.path.join("assets", "icons")
             if os.path.exists(icons_dir):
                 try:

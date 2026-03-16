@@ -114,7 +114,6 @@ class LifetimeStackedChart(QFrame):
         sorted_activities = sorted(list(all_activities))
         
         # Prepare data for stacking
-        # x = indices
         x = range(len(sorted_dates))
         bottoms = [0] * len(sorted_dates)
         
@@ -124,16 +123,13 @@ class LifetimeStackedChart(QFrame):
             '#576574', '#0ABDE3', '#EE5253', '#10AC84', '#2E86DE', '#341F97', '#8395A7', '#FFC312'
         ]
         
-        # Calculate total duration for each activity to sort them
         activity_totals = {}
         for act in sorted_activities:
              total = sum(daily_breakdown[d].get(act, 0) for d in sorted_dates)
              activity_totals[act] = total
              
-        # Sort activities by total duration (descending) so biggest stacks are consistently colored/ordered
         sorted_activities.sort(key=lambda a: activity_totals[a], reverse=True)
 
-        # We will only put the top 10 in the legend to avoid clutter
         top_activities = set(sorted_activities[:10])
         
         handles = []
@@ -143,22 +139,19 @@ class LifetimeStackedChart(QFrame):
             color = colors[i % len(colors)]
             values = []
             for d in sorted_dates:
-                # Convert to hours
                 seconds = daily_breakdown[d].get(activity, 0)
                 values.append(seconds / 3600)
             
             bar = self.ax.bar(x, values, bottom=bottoms, color=color, width=0.6, linewidth=0)
             
-            # Record handle for legend if in top 10
             if activity in top_activities:
                 handles.append(bar)
                 labels.append(format_app_name(activity))
             
-            # Update bottoms
+
             for j in range(len(bottoms)):
                 bottoms[j] += values[j]
         
-        # Fetch text color from theme
         text_color = "#e0e0e0"
         try:
             from src.ui.styles import themes_dir
@@ -175,16 +168,13 @@ class LifetimeStackedChart(QFrame):
         self.ax.tick_params(axis='y', labelsize=8, colors=text_color)
         self.ax.set_ylabel("Hours", fontsize=9, color=text_color)
         
-        # Styling
         self.ax.spines['top'].set_visible(False)
         self.ax.spines['right'].set_visible(False)
         self.ax.spines['bottom'].set_color(text_color)
         self.ax.spines['left'].set_color(text_color)
         self.ax.grid(axis='y', linestyle='--', alpha=0.3)
         
-        # Dynamic Width
-        # Increase width significantly to fit "Feb 17, 2026" horizontally without overlap
-        # Estimate ~80-100px per label?
+
         width_inch = max(6, len(sorted_dates) * 1.2) 
         self.figure.set_size_inches(width_inch, 3.5)
         self.canvas.setFixedWidth(int(width_inch * 90))
@@ -192,8 +182,7 @@ class LifetimeStackedChart(QFrame):
         self.figure.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.15)
         
         self.canvas.draw()
-        
-        # Update List
+
         self._fill_list(sorted_activities, activity_totals, colors)
 
     def _fill_list(self, sorted_activities, activity_totals, colors):
@@ -246,7 +235,6 @@ class StatsPanel(QFrame):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(5)
         
-        # --- Chart Area (Scrollable) ---
         self.chart_scroll = QScrollArea()
         self.chart_scroll.setWidgetResizable(True) 
         self.chart_scroll.setFrameShape(QFrame.NoFrame)
@@ -265,7 +253,6 @@ class StatsPanel(QFrame):
                 background: none;
             }
         """)
-        # Reduced height to allow top box to be smaller
         self.chart_scroll.setFixedHeight(230) 
 
         self.chart_container = QWidget()
@@ -284,7 +271,6 @@ class StatsPanel(QFrame):
         
         self.layout.addWidget(self.chart_scroll)
         
-        # List Area
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QFrame.NoFrame)
@@ -339,7 +325,6 @@ class StatsPanel(QFrame):
         
         bars = self.ax.bar(range(len(values)), values, color=bar_colors, width=0.7)
         
-        # Fetch text color from theme
         text_color = "#e0e0e0"
         try:
             from src.ui.styles import themes_dir, FALLBACK_THEME
@@ -363,7 +348,6 @@ class StatsPanel(QFrame):
         self.ax.set_ylabel(unit, fontsize=8, color=text_color)
         
         num_bars = len(values)
-        # Increased width per bar to prevent squeezing and enable scrolling
         width_inch = max(5, num_bars * 0.6) 
         height_inch = 2.8 
         
@@ -453,7 +437,6 @@ class ClusteredColumnChart(QFrame):
         self.ax.clear()
         self.ax.set_facecolor('none')
         
-        # Fetch text color from theme
         text_color = "#e0e0e0"
         try:
             from src.ui.styles import themes_dir
@@ -478,7 +461,6 @@ class ClusteredColumnChart(QFrame):
         bar_width = 0.8 / n_groups if n_groups > 0 else 0.8
         
         max_val = 0
-        # Calculate total max in seconds to determine unit
         for i, group in enumerate(groups):
             if group:
                 for d in sorted_dates:
@@ -535,16 +517,13 @@ class ClusteredColumnChart(QFrame):
         
         max_y = max_plot_val * 1.1 if max_plot_val > 0 else 1
         self.ax.set_ylim(0, max_y)
-        
-        # Save horizontal scrollbar position
+
         scrollbar = self.chart_scroll.horizontalScrollBar()
         scroll_val = scrollbar.value()
         
         self.figure.subplots_adjust(left=0.08, right=0.95, top=0.9, bottom=0.15)
         self.canvas.draw()
         
-        # Restore scrollbar position after drawing
-        # Use QTimer to ensure layout has updated before setting scroll
         QTimer.singleShot(0, lambda: scrollbar.setValue(scroll_val))
 
 class StatisticsWidget(QWidget):
@@ -558,18 +537,11 @@ class StatisticsWidget(QWidget):
         self.layout.setContentsMargins(20, 20, 20, 20)
         self.layout.setSpacing(15)
         
-        # ... (Layout setup remains same until timer) ... Since I can't easily skip lines in replace_file_content without context matching, 
-        # I will target the __init__ signature and the Timer block separately if possible, or just the whole file if I have to.
-        # But here I am replacing the whole class or large chunks.
-        # Let's try to do it in chunks.
-        
-        # === 1. TOP ROW (Left + Right Columns) ===
         self.top_row_widget = QWidget()
         self.top_row_layout = QHBoxLayout(self.top_row_widget)
         self.top_row_layout.setContentsMargins(0, 0, 0, 0)
         self.top_row_layout.setSpacing(20)
-        
-        # --- A. Left Column (Stats) ---
+
         self.left_col = QWidget()
         self.left_layout = QVBoxLayout(self.left_col)
         self.left_layout.setContentsMargins(0, 0, 0, 0)
@@ -587,7 +559,7 @@ class StatisticsWidget(QWidget):
         self.tab_layout.addStretch()
         self.left_layout.addLayout(self.tab_layout)
 
-        # Main Box (Stacked Content)
+        # Main Box
         self.main_box = QFrame()
         self.main_box.setObjectName("SettingsCard")
         self.main_box.setObjectName("MainBox")
@@ -651,7 +623,7 @@ class StatisticsWidget(QWidget):
         
         self.left_layout.addWidget(self.main_box)
         
-        # --- B. Right Column (Lifetime Stacked) ---
+        #--
         self.right_col = QWidget()
         self.right_layout = QVBoxLayout(self.right_col)
         self.right_layout.setContentsMargins(0, 0, 0, 0)
@@ -677,10 +649,9 @@ class StatisticsWidget(QWidget):
         
         self.layout.addWidget(self.top_row_widget)
         
-        # === 2. BOTTOM ROW (Full Width) ===
+        # ==
         self.bottom_box = QFrame()
         self.bottom_box.setObjectName("SettingsCard")
-        # We let it expand naturally instead of fixing height
         self.bottom_box_layout = QVBoxLayout(self.bottom_box)
         self.bottom_box_layout.setContentsMargins(15, 15, 15, 15)
         self.bottom_box_layout.setSpacing(10)
@@ -694,9 +665,8 @@ class StatisticsWidget(QWidget):
         self.groups_layout.setSpacing(20)
         self.groups_layout.setAlignment(Qt.AlignLeft)
         self.group_combos = []
-        self.group_colors = ['#FF6B6B', '#1DD1A1', '#54A0FF'] # Red, Green, Blue
+        self.group_colors = ['#FF6B6B', '#1DD1A1', '#54A0FF']
         
-        # Load cached selections
         self.cache_file = os.path.join(os.path.dirname(__file__), '..', '..', 'chart_cache.json')
         self.cached_selections = [[], [], []]
         try:
@@ -714,7 +684,6 @@ class StatisticsWidget(QWidget):
             combo = CheckableComboBox()
             combo.setFixedWidth(200)
             
-            # Identify the combo logic to save to cache when selection changes
             combo.setProperty("group_index", i)
             combo.selectionChanged.connect(self._on_combo_selection_changed)
             
@@ -731,7 +700,6 @@ class StatisticsWidget(QWidget):
         
         self.layout.addWidget(self.bottom_box)
         
-        # Auto-refresh timer (every 1 second for live stats)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(1000) 
@@ -752,7 +720,6 @@ class StatisticsWidget(QWidget):
         return btn
         
     def _get_tab_style(self, active):
-        # Fetch dynamic theme
         import json, os
         from src.ui.styles import themes_dir, FALLBACK_THEME
         
@@ -833,27 +800,21 @@ class StatisticsWidget(QWidget):
         if self.current_date == date.today():
              stats = self.db.get_today_stats()
              
-             # MERGE LIVE DATA FROM TRACKER
              if self.tracker:
                  import time
                  current_time = time.time()
                  
-                 # Helper to add/update stats list
                  def add_to_stats(name, duration):
                      for s in stats:
                          if s['name'] == name:
                              s['total_seconds'] += duration
                              return
                      stats.append({'name': name, 'total_seconds': duration})
-
-                 # 1. Auto-Tracker
                  if self.tracker.current_activity and self.tracker.start_time:
                      duration = current_time - self.tracker.start_time
                      if duration > 0:
                          add_to_stats(self.tracker.current_activity.name, duration)
                          
-                 # 2. Manual Sessions
-                 # Use manual_activities if available, else skip to avoid crash
                  if hasattr(self.tracker, 'manual_activities') and hasattr(self.tracker, 'manual_start_times'):
                      for aid, activity in self.tracker.manual_activities.items():
                          start_t = self.tracker.manual_start_times.get(aid)
@@ -862,7 +823,6 @@ class StatisticsWidget(QWidget):
                              if duration > 0:
                                  add_to_stats(activity.name, duration)
              
-             # Re-sort after merging
              stats.sort(key=lambda x: x['total_seconds'], reverse=True)
              
         else:
@@ -873,8 +833,6 @@ class StatisticsWidget(QWidget):
 
     def refresh_total(self):
         stats = self.db.get_activity_stats()
-        # For total, we could also merge live data, but 'today' is most important for "Live" feel.
-        # Let's merge it for consistency if we are looking at total.
         
         if self.tracker:
              import time
@@ -905,10 +863,7 @@ class StatisticsWidget(QWidget):
         self.lifetime_total_lbl.setText(self._calculate_total_str(stats))
         self.total_panel.update_data(stats)
         
-        # Update Stacked Chart
         daily_breakdown = self.db.get_daily_activity_breakdown()
-        # We can optionally merge live data here too if we want "Today" column to be live in the stacked chart
-        # But let's keep it simple for now, or just add it to today's entry
         
         if self.tracker:
             import time
@@ -940,20 +895,17 @@ class StatisticsWidget(QWidget):
 
         self.lifetime_chart.update_data(daily_breakdown)
 
-        # Build comprehensive list of all activities for comboboxes
         all_activities = set()
         for d in daily_breakdown:
             all_activities.update(daily_breakdown[d].keys())
         all_act_list = sorted(list(all_activities))
         
         for i, combo in enumerate(self.group_combos):
-            # Pass cached selections if applicable
             combo.set_items(all_act_list, initial_checked=self.cached_selections[i])
             
         self.refresh_clustered_chart(daily_breakdown)
 
     def _on_combo_selection_changed(self):
-        # Save to cache
         try:
             selections = [c.get_checked_items() for c in self.group_combos]
             with open(self.cache_file, 'w') as f:
@@ -968,7 +920,6 @@ class StatisticsWidget(QWidget):
         if not hasattr(self, 'group_combos') or not hasattr(self, 'clustered_chart'):
             return
             
-        # Re-fetch if called directly from CheckableComboBox signal
         if not isinstance(daily_breakdown, dict):
             daily_breakdown = self.db.get_daily_activity_breakdown()
             

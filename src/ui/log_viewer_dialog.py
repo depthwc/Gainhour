@@ -120,12 +120,12 @@ class LogViewerDialog(QDialog):
         
         # Table Settings
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)       # Description
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Start
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents) # End
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents) # Duration
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # Count
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents) # Total Usage
+        header.setSectionResizeMode(0, QHeaderView.Stretch)       
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         
         table.verticalHeader().setVisible(False)
         table.setSelectionBehavior(QTableWidget.SelectRows)

@@ -5,7 +5,6 @@ import sys
 def reset_data():
     print("Resetting Gainhour Data...")
     
-    # 1. Delete Database
     db_path = "gainhour.db"
     if os.path.exists(db_path):
         try:
@@ -16,14 +15,12 @@ def reset_data():
     else:
         print(f"{db_path} not found.")
         
-    # 2. Delete Icons
-    # Assuming standard path relative to this script or project root
-    # This script will be run from project root ideally
+
     icons_dir = os.path.join("assets", "icons")
     if os.path.exists(icons_dir):
         try:
             shutil.rmtree(icons_dir)
-            os.makedirs(icons_dir) # Recreate empty dir
+            os.makedirs(icons_dir) 
             print(f"Cleared {icons_dir}")
         except Exception as e:
             print(f"Error clearing {icons_dir}: {e}")

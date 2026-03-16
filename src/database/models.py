@@ -9,7 +9,7 @@ class Activity(Base):
     __tablename__ = 'activities'
     
     id = Column(Integer, primary_key=True)
-    type = Column(String)  # 'app' or 'irl'
+    type = Column(String)
     name = Column(String, unique=True, nullable=False)
     description = Column(String, nullable=True)
     icon_path = Column(String, nullable=True)
@@ -60,7 +60,6 @@ class Setting(Base):
     value = Column(String)
 
 def _fk_pragma_on_connect(dbapi_con, con_record):
-    # Enable Write-Ahead Logging for concurrent reading/writing
     cursor = dbapi_con.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")

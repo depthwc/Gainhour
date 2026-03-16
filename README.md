@@ -44,11 +44,15 @@ You can package the application into a standalone Windows executable using PyIns
 ```bash
 pyinstaller Gainhour.spec
 ```
-The built executable will be located in the `dist/Gainhour` directory.
-
 ## Usage
 
 - **Home Tab:** View your currently active auto-tracked applications and manual sessions. You can start/stop manual sessions and toggle Discord visibility per app directly from here.
 - **Activities Tab:** Browse the list of all tracked applications and IRL activities, view total time, and manually adjust their visibility.
 - **Statistics Tab:** Visualize your tracked time through daily breakdowns and lifetime charts. Create custom groupings to compare specific apps.
 - **Settings Tab:** Configure startup behavior, manage log history, toggle Discord integration globally, choose UI themes, and manage or reset your underlying database.
+
+- Startup may not work.
+
+- U can change defoult theses in \themes folder
+
+- Default ignored apps can be modified in \core\tracker.py line 30 ```bash self.ignored_apps = {"explorer.exe", "SearchApp.exe", "ShellExperienceHost.exe"}```

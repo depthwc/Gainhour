@@ -7,7 +7,7 @@
     "border": "#3e3e3e",
     "nav_hover": "#37373d",
     "nav_text": "#a0a0a0",
-    "primary": "#5865F2",
+    "primary": "#43697d",
     "primary_hover": "#4752C4",
     "card_bg": "#252526",
     "stop_btn": "#ff9900",
@@ -15,6 +15,6 @@
     "stop_btn_text": "black",
     "input_bg": "#3c3c3c",
     "input_border": "#3c3c3c",
-    "input_focus": "#5865F2",
+    "input_focus": "#43697d",
     "danger_text": "#ff4444"
-}
+} 

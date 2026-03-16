@@ -2,13 +2,13 @@ import json
 import os
 import glob
 
-# Load themes dynamically from the 'themes' directory
+
 THEMES = {}
 
 from src.utils.path_utils import get_resource_path
 themes_dir = get_resource_path("themes")
 
-# Fallback basic theme in case themes folder is empty or not found
+
 FALLBACK_THEME = {
     "theme_name": "Fallback Night",
     "bg_main": "#1e1e1e",
@@ -18,15 +18,15 @@ FALLBACK_THEME = {
     "border": "#3e3e3e",
     "nav_hover": "#37373d",
     "nav_text": "#a0a0a0",
-    "primary": "#5865F2",
-    "primary_hover": "#4752C4",
+    "primary": "#43697d",
+    "primary_hover": "#43697d",
     "card_bg": "#252526",
     "stop_btn": "#ff9900",
     "stop_btn_hover": "#e68a00",
     "stop_btn_text": "black",
     "input_bg": "#3c3c3c",
     "input_border": "#3c3c3c",
-    "input_focus": "#5865F2",
+    "input_focus": "#43697d",
     "danger_text": "#ff4444"
 }
 
@@ -37,47 +37,40 @@ def load_themes():
     if os.path.exists(themes_dir):
         for filepath in glob.glob(os.path.join(themes_dir, "*.json")):
             try:
-                # We do not want 'theme.json' itself to appear as a selectable button
                 if os.path.basename(filepath) == "theme.json":
                     continue
                     
                 with open(filepath, 'r', encoding='utf-8') as f:
                     theme_data = json.load(f)
-                    # Use the filename (without .json) as the internal theme key
                     theme_key = os.path.basename(filepath)[:-5]
                     THEMES[theme_key] = theme_data
             except Exception as e:
                 print(f"Failed to load theme {filepath}: {e}")
 
-    # Fallback if no valid themes were found
+
     if not THEMES:
         THEMES["night"] = FALLBACK_THEME
 
-# Initial load
 load_themes()
 
 def generate_darker_accent_css(t):
     base_hex = t.get('primary', FALLBACK_THEME['primary'])
-    # If the theme already provided a hover color, we don't need to generate a CSS fallback
     if 'primary_hover' in t:
         return ""
         
     try:
-        # Simple darken by reducing rgb values by ~20%
         base_hex = base_hex.lstrip('#')
         r, g, b = tuple(int(base_hex[i:i+2], 16) for i in (0, 2, 4))
         r = max(0, int(r * 0.8))
         g = max(0, int(g * 0.8))
         b = max(0, int(b * 0.8))
         darker_hex = f"#{r:02x}{g:02x}{b:02x}"
-        t['primary_hover'] = darker_hex # Store it so the rest of the stylesheet can use it
+        t['primary_hover'] = darker_hex
     except:
         pass
     return ""
 
 def get_stylesheet(theme_name="theme"):
-    # Always try to read from the master `theme.json` first, 
-    # if it doesn't exist, fallback to whatever is in THEMES or FALLBACK_THEME
     t = FALLBACK_THEME
     
     main_theme_path = os.path.join(themes_dir, "theme.json")

@@ -15,7 +15,7 @@ def get_active_window_info():
         process_name = process.name()
         window_title = win32gui.GetWindowText(window_handle)
         
-        # Filter out some common system/empty windows if needed
+        # Filter
         if not window_title.strip():
             window_title = process_name
 
@@ -30,12 +30,10 @@ def get_active_window_info():
             "executable_path": executable_path
         }
     except Exception as e:
-        # Fallback or error handling
         return None
 import ctypes
 from ctypes import windll, c_int, byref
 
-# DWM constants
 DWMWA_CLOAKED = 13
 
 def is_cloaked(hwnd):
@@ -55,30 +53,19 @@ def get_open_windows():
     windows = []
     
     def enum_window_callback(hwnd, _):
-        # Basic visibility check
         if not win32gui.IsWindowVisible(hwnd):
             return
 
-        # Title check
         window_title = win32gui.GetWindowText(hwnd)
         if not window_title or not window_title.strip():
             return
             
-        # Cloaked check
         if is_cloaked(hwnd):
-            # print(f"DEBUG: Rejected Cloaked: {window_title}")
-            # return
             pass
 
-        # Tool window check (avoids background processes/helpers)
-        # GWL_EXSTYLE = -20
-        # WS_EX_TOOLWINDOW = 0x00000080
-        # WS_EX_APPWINDOW = 0x00040000
         try:
             ex_style = win32gui.GetWindowLong(hwnd, -20)
             if (ex_style & 0x00000080) and not (ex_style & 0x00040000):
-                # print(f"DEBUG: Rejected ToolWindow: {window_title}")
-                # return
                 pass
         except:
              pass

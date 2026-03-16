@@ -18,10 +18,7 @@ class DiscordRPC:
                 self.connected = True
                 print("Successfully connected to Discord RPC")
             except Exception as e:
-                # Only print error if it's not the generic "pipe closed" which happens when Discord isn't running
-                # or specifically if it's an invalid ID
                 if "Client ID is Invalid" in str(e) or "Invalid pipe" in str(e):
-                    # Disable attempts to prevent spam if ID is bad
                     self.connected = False
                     return 
                 
@@ -34,7 +31,6 @@ class DiscordRPC:
 
     def update(self, state, details=None, start=None, large_image=None, large_text=None):
         if not self.connected:
-            # Try to connect, but if it fails (returns False), don't try to update
             if self.connect() is False:
                 return
         
@@ -48,7 +44,6 @@ class DiscordRPC:
                     large_text=large_text
                 )
             except Exception as e:
-                # If update fails, we might have lost connection
                 print(f"Lost connection to Discord RPC: {e}")
                 self.connected = False
 

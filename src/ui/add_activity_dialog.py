@@ -15,9 +15,8 @@ class AddActivityDialog(QDialog):
         self.selected_icon_path = None
         
         self.setWindowTitle("Edit Activity" if activity_to_edit else "Add IRL Activity")
-        self.setFixedSize(350, 450) # Taller, narrower for modern look
+        self.setFixedSize(350, 450)
         
-        # Apply Global Theme directly to Dialog
         self.setStyleSheet(get_stylesheet("theme") + """
             QPushButton#SaveBtn {
                 padding: 10px;
@@ -37,7 +36,6 @@ class AddActivityDialog(QDialog):
         layout.setSpacing(20)
         layout.setContentsMargins(30, 40, 30, 30)
         
-        # 1. Icon Selection Area (Top Center)
         icon_layout = QVBoxLayout()
         icon_layout.setAlignment(Qt.AlignCenter)
         
@@ -61,11 +59,9 @@ class AddActivityDialog(QDialog):
         
         layout.addLayout(icon_layout)
         
-        # 2. Inputs
         form_layout = QVBoxLayout()
         form_layout.setSpacing(15)
         
-        # Name
         name_container = QVBoxLayout()
         name_container.setSpacing(5)
         name_lbl = QLabel("ACTIVITY NAME")
@@ -76,7 +72,6 @@ class AddActivityDialog(QDialog):
         name_container.addWidget(self.name_input)
         form_layout.addLayout(name_container)
         
-        # Description
         desc_container = QVBoxLayout()
         desc_container.setSpacing(5)
         desc_lbl = QLabel("DESCRIPTION (OPTIONAL)")
@@ -90,7 +85,6 @@ class AddActivityDialog(QDialog):
         layout.addLayout(form_layout)
         layout.addStretch()
         
-        # 3. Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         
@@ -107,10 +101,10 @@ class AddActivityDialog(QDialog):
         
         layout.addLayout(btn_layout)
         
-        # Initialize Values
+#___________________
         if activity_to_edit:
             self.name_input.setText(activity_to_edit.name)
-            # self.name_input.setReadOnly(True) # Optional: Allow renaming? Usually risky if ID based.
+
             self.desc_input.setText(activity_to_edit.description or "")
             if activity_to_edit.icon_path:
                 self.selected_icon_path = activity_to_edit.icon_path
@@ -140,7 +134,6 @@ class AddActivityDialog(QDialog):
                 icon = QIcon(pix)
                 self.icon_btn.setIcon(icon)
                 self.icon_btn.setIconSize(QSize(80, 80))
-                # Solid border for selected
                 self.icon_btn.setObjectName("SecondaryButton")
                 self.icon_btn.setStyleSheet("""
                     QPushButton {
@@ -161,21 +154,17 @@ class AddActivityDialog(QDialog):
         desc = self.desc_input.text().strip()
         
         if not name:
-            return # TODO: Show error
+            return
             
         final_icon_path = None
         if self.selected_icon_path and os.path.exists(self.selected_icon_path):
-             # Save to internal user_icons folder if it's new
              if self.activity_to_edit and self.activity_to_edit.icon_path == self.selected_icon_path:
                  final_icon_path = self.selected_icon_path
              else:
                  final_icon_path = self.icon_manager.save_user_icon(self.selected_icon_path, name)
-              
         if self.activity_to_edit:
-            # Update
             self.db.update_activity(self.activity_to_edit.id, description=desc, icon_path=final_icon_path)
         else:
-            # Create
             self.db.get_or_create_activity(name, 'irl', description=desc, icon_path=final_icon_path)
             
         self.accept()

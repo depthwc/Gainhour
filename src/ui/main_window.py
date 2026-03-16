@@ -19,7 +19,6 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Gainhour")
-        # Start maximized or large
         self.resize(1400, 900)
         
         from src.utils.path_utils import get_resource_path, get_db_path
@@ -32,9 +31,8 @@ class MainWindow(QMainWindow):
         self.tracker = Tracker(self.db, self.icon_manager)
         self.tracker.start()
 
-        # Apply Unified Theme
-        # We now rely primarily on the dynamic theme.json 
-        self.db.get_setting("theme", "night") # Get to ensure it exists, but we pass "theme" so styles.py resolves theme.json
+        # THeme
+        self.db.get_setting("theme", "night")
         QApplication.instance().setStyleSheet(get_stylesheet("theme"))
 
         # Central Widget & Layout
@@ -48,7 +46,7 @@ class MainWindow(QMainWindow):
         self.create_nav_bar()
         main_layout.addWidget(self.nav_frame)
 
-        # Content Area (Stacked Widget)
+        # Content Area
         self.stack = QStackedWidget()
         main_layout.addWidget(self.stack)
 
@@ -67,15 +65,14 @@ class MainWindow(QMainWindow):
         # Timer for updates
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_ui)
-        self.update_timer.start(1000) # 1 second
+        self.update_timer.start(1000)
         
-        # Tray Icon
         self.create_tray_icon()
 
     def create_nav_bar(self):
         self.nav_frame = QWidget()
         self.nav_frame.setObjectName("NavFrame")
-        self.nav_frame.setFixedWidth(220) # Slightly wider
+        self.nav_frame.setFixedWidth(220)
         
         layout = QVBoxLayout(self.nav_frame)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -115,16 +112,13 @@ class MainWindow(QMainWindow):
         if index < self.stack.count():
             self.stack.setCurrentIndex(index)
             
-            # Update Button State
             self.nav_btns[index].setChecked(True)
                 
-            # Refresh if needed
             widget = self.stack.currentWidget()
             if hasattr(widget, 'refresh'):
                 widget.refresh()
 
     def update_ui(self):
-        # Propagate updates to active widget
         current = self.stack.currentWidget()
         if hasattr(current, 'update_data'):
             current.update_data()
@@ -138,7 +132,6 @@ class MainWindow(QMainWindow):
         if os.path.exists(icon_path):
             self.tray_icon.setIcon(QIcon(icon_path))
         else:
-             # Fallback 
              pass
             
         # Menu
@@ -171,16 +164,8 @@ class MainWindow(QMainWindow):
         QApplication.instance().quit()
 
     def closeEvent(self, event):
-        # Check settings? Or default to tray
         if self.tray_icon.isVisible():
             self.hide()
-            # Notification removed as per user request
-            # self.tray_icon.showMessage(
-            #     "Gainhour",
-            #     "Running in background",
-            #     QSystemTrayIcon.Information,
-            #     2000
-            # )
             event.ignore()
         else:
             self.tracker.stop()

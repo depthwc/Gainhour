@@ -37,17 +37,14 @@ class StorageManager:
         try:
             activity = session.query(Activity).filter_by(name=name, type=activity_type).first()
             if not activity:
-                # Force description to None if type is 'app'
                 if activity_type == 'app':
                     description = None
                     
                 activity = Activity(name=name, type=activity_type, description=description, icon_path=icon_path)
                 session.add(activity)
                 session.commit()
-                # Refresh to get ID
                 session.refresh(activity)
             elif icon_path and not activity.icon_path:
-                # Update icon if missing
                 activity.icon_path = icon_path
                 session.commit()
                 session.refresh(activity)
@@ -71,7 +68,6 @@ class StorageManager:
         try:
             log = session.query(ActivityLog).get(log_id)
             if log:
-                # Always update end_time (Heartbeat approach)
                 log.end_time = datetime.now()
                 log.duration_seconds = int((log.end_time - log.start_time).total_seconds())
                 session.commit()
@@ -103,13 +99,6 @@ class StorageManager:
             activity = session.query(Activity).get(activity_id)
             if activity:
                 if description is not None:
-                     # Only update description if NOT app, or if explicit override logic exists?
-                     # User said: "make sure description wont be automaticly recorded here... only for irl tags"
-                     # Since this method might be used by UI for manual edits, we should probably allow manual edits?
-                     # But user request implies rigid rule. 
-                     # Let's assume this method is general purpose. 
-                     # Actually, safe to just allow it here, as tracker calls are the main source of auto-updates.
-                     # But let's add a guard if it's 'app' and we want to enforce the rule strictly.
                      if activity.type != 'app':
                         activity.description = description
                 if icon_path is not None:
@@ -122,9 +111,6 @@ class StorageManager:
     def get_activity_stats(self):
         session = self.get_session()
         try:
-            # Query to sum duration for each activity
-            # We filter out logs with 0 duration or no end_time (still running)
-            # For simplicity, we just look at closed logs
             activities = session.query(Activity).all()
             stats = []
             for activity in activities:
@@ -136,7 +122,6 @@ class StorageManager:
                         "total_seconds": total_seconds,
                         "icon_path": activity.icon_path
                     })
-            # Sort by duration
             stats.sort(key=lambda x: x['total_seconds'], reverse=True)
             return stats
         finally:
@@ -149,7 +134,6 @@ class StorageManager:
             if not activity:
                 return 0
             
-            # Use SQL sum for efficiency
             total = session.query(func.sum(ActivityLog.duration_seconds)).filter(
                 ActivityLog.activity_id == activity.id
             ).scalar()
@@ -189,14 +173,10 @@ class StorageManager:
         session = self.get_session()
         try:
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            # We need to sum durations for logs starting today, grouped by activity
-            # But straightforward way: get all activities, sum their logs for today
             activities = session.query(Activity).all()
             stats = []
             
             for activity in activities:
-                # Calculate total seconds for today ONLY
-                # We could do a join query but this is simpler for now
                 total_seconds = sum(
                     log.duration_seconds for log in activity.logs 
                     if log.start_time >= today_start and log.duration_seconds
@@ -220,7 +200,6 @@ class StorageManager:
         """Get stats for a specific date (date object)."""
         session = self.get_session()
         try:
-            # Range: target_date 00:00:00 to target_date 23:59:59
             start_dt = datetime.combine(target_date, datetime.min.time())
             end_dt = datetime.combine(target_date, datetime.max.time())
             
@@ -228,8 +207,6 @@ class StorageManager:
             stats = []
             
             for activity in activities:
-                # Sum logs that STARTED within the range
-                # Or cover the range? Simple approach: start_time in range.
                 total_seconds = sum(
                     log.duration_seconds for log in activity.logs 
                     if log.start_time >= start_dt and log.start_time <= end_dt and log.duration_seconds
@@ -252,12 +229,9 @@ class StorageManager:
     def clean_explorer_data(self):
         session = self.get_session()
         try:
-            # Find explorer activity
             activity = session.query(Activity).filter_by(name="explorer.exe").first()
             if activity:
-                # Delete logs first
                 session.query(ActivityLog).filter_by(activity_id=activity.id).delete()
-                # Delete activity
                 session.delete(activity)
                 session.commit()
         except Exception as e:
@@ -282,7 +256,6 @@ class StorageManager:
         try:
             log = session.query(ActivityDescriptionLog).get(log_id)
             if log:
-                # Always update end_time (Heartbeat approach)
                 log.end_time = datetime.now()
                 log.duration_seconds = int((log.end_time - log.start_time).total_seconds())
                 session.commit()
@@ -291,7 +264,7 @@ class StorageManager:
 
     def update_log_heartbeat(self, log_id):
         """Update end_time of a log to now without closing it conceptually (keeps it valid)."""
-        self.stop_logging(log_id) # Re-use stop logic as it just updates timestamp
+        self.stop_logging(log_id)
 
     def update_desc_heartbeat(self, log_id):
         self.stop_description_log(log_id)
@@ -300,18 +273,13 @@ class StorageManager:
         """Close any logs that were left open (NULL end_time) due to crashes."""
         session = self.get_session()
         try:
-            # 1. Activity Logs
             incomplete_logs = session.query(ActivityLog).filter(ActivityLog.end_time == None).all()
             count = 0
             for log in incomplete_logs:
-                # Set end_time to start_time (0 duration) or maybe 1 minute later?
-                # User asked to fix nulls. Closing them at start_time is safest "cleaning".
-                # Or we could assume they lasted 1 min?
                 log.end_time = log.start_time
                 log.duration_seconds = 0
                 count += 1
-            
-            # 2. Description Logs
+
             incomplete_desc = session.query(ActivityDescriptionLog).filter(ActivityDescriptionLog.end_time == None).all()
             d_count = 0
             for log in incomplete_desc:
@@ -358,19 +326,11 @@ class StorageManager:
                 query = query.filter(ActivityDescriptionLog.start_time >= today_start)
             
             logs = query.order_by(ActivityDescriptionLog.start_time.desc()).all()
-            
-            # To get "Count" and "Total Usage" for each description efficiently:
-            # We can pre-calculate stats for ALL descriptions of this activity (not just today's if today_only is set? 
-            # User asked: "how many times this description used. total time of usege of this description."
-            # Usually this implies "Total Historical Stats" even if viewing today's logs.
-            # So let's fetch global stats for the descriptions present in the logs.
-            
-            # 1. Get unique descriptions from the fetched logs to optimize
+
             unique_descs = set(log.description for log in logs if log.description)
             
             stats_map = {}
             if unique_descs:
-                # Group by description to get global stats
                 stat_query = session.query(
                     ActivityDescriptionLog.description, 
                     func.count(ActivityDescriptionLog.id), 
@@ -413,19 +373,17 @@ class StorageManager:
             if not activity:
                 return False
             
-            # 1. Delete Icon File if custom
             if activity.icon_path and os.path.exists(activity.icon_path):
-                # Try to delete file
                 try:
                     os.remove(activity.icon_path)
                 except Exception as e:
                     print(f"Error deleting icon file: {e}")
 
-            # 2. Delete Logs (Cascade usually handles this if set up, but safer to do explicit)
+
             session.query(ActivityLog).filter_by(activity_id=activity_id).delete()
             session.query(ActivityDescriptionLog).filter_by(activity_id=activity_id).delete()
             
-            # 3. Delete Activity
+
             session.delete(activity)
             session.commit()
             return True
@@ -451,7 +409,7 @@ class StorageManager:
             from src.database.models import Setting
             setting = session.query(Setting).get(key)
             if not setting:
-                setting = Setting(key=key, value=str(value)) # Store as string
+                setting = Setting(key=key, value=str(value)) 
                 session.add(setting)
             else:
                 setting.value = str(value)
@@ -464,10 +422,8 @@ class StorageManager:
         session = self.get_session()
         try:
             from src.database.models import ActivityDescriptionLog
-            # Get start of today
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            
-            # Delete older logs
+
             deleted = session.query(ActivityDescriptionLog).filter(ActivityDescriptionLog.start_time < today_start).delete()
             session.commit()
             print(f"Cleanup: Deleted {deleted} old description logs.")
@@ -485,8 +441,6 @@ class StorageManager:
         """
         session = self.get_session()
         try:
-            # Group by Date and Activity
-            # SQLite returns date string 'YYYY-MM-DD'
             data = session.query(
                 func.date(ActivityLog.start_time),
                 Activity.name,
@@ -501,11 +455,10 @@ class StorageManager:
                 try:
                     day = datetime.strptime(day_str, "%Y-%m-%d").date()
                 except ValueError:
-                    continue # Skip invalid dates
+                    continue
                     
                 if day not in result:
                     result[day] = {}
-                # Handle potentially None duration (though we filtered)
                 result[day][act_name] = duration
                 
             return result
@@ -517,7 +470,6 @@ class StorageManager:
         session = self.get_session()
         try:
             from src.database.models import Activity, ActivityLog, ActivityDescriptionLog, Setting
-            # Clear logs first due to foreign keys
             session.query(ActivityDescriptionLog).delete()
             session.query(ActivityLog).delete()
             session.query(Activity).delete()

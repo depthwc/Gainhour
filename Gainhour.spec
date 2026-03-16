@@ -1,4 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
+
+block_cipher = None
 
 
 a = Analysis(
@@ -6,7 +9,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('src/icons', 'src/icons'), ('themes', 'themes'), ('gainhour.ico', '.')],
-    hiddenimports=[],
+    hiddenimports=['PySide6', 'qdarkstyle', 'pypresence', 'psutil', 'pywin32', 'PIL', 'sqlalchemy', 'matplotlib'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

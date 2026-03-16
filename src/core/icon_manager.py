@@ -15,7 +15,6 @@ class IconManager:
     
     def get_icon_path(self, name):
         """Returns the path to the icon for the given activity name."""
-        # Sanitize name for filename
         safe_name = "".join([c for c in name if c.isalpha() or c.isdigit() or c==' ']).rstrip()
         filename = f"{safe_name}.png"
         path = os.path.join(self.icons_dir, filename)
@@ -29,7 +28,6 @@ class IconManager:
             return None
         
         try:
-            # Load the icon from the executable
             large, small = win32gui.ExtractIconEx(exe_path, 0)
             
             hIcon = None
@@ -40,7 +38,6 @@ class IconManager:
             else:
                 return None
             
-            # Create a PyCBitmap from the icon
             ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
             ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
@@ -52,7 +49,6 @@ class IconManager:
             hdc.SelectObject(hbmp)
             hdc.DrawIcon((0, 0), hIcon)
             
-            # Convert to PIL Image
             bmpinfo = hbmp.GetInfo()
             bmpstr = hbmp.GetBitmapBits(True)
             img = Image.frombuffer(
@@ -60,12 +56,10 @@ class IconManager:
                 (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
                 bmpstr, 'raw', 'BGRX', 0, 1)
 
-            # Save
             safe_name = "".join([c for c in name if c.isalpha() or c.isdigit() or c==' ']).rstrip()
             save_path = os.path.join(self.icons_dir, f"{safe_name}.png")
             img.save(save_path)
             
-            # Cleanup
             win32gui.DestroyIcon(hIcon)
             
             return save_path

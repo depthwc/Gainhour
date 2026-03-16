@@ -9,8 +9,6 @@ class CheckableComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setEditable(False)
-        
-        # Use a standard item model instead of the default
         self.model_ = QStandardItemModel(self)
         self.setModel(self.model_)
         
@@ -22,10 +20,7 @@ class CheckableComboBox(QComboBox):
     def eventFilter(self, obj, event):
         if obj == self.view().viewport():
             if event.type() == QEvent.MouseButtonRelease:
-                # Let the handleItemPressed do the checking/unchecking
-                # But prevent the popup from closing!
                 return True
-            # Also consume mouse press to prevent default selection closing
             if event.type() == QEvent.MouseButtonPress:
                 return False
         return super().eventFilter(obj, event)
@@ -41,13 +36,10 @@ class CheckableComboBox(QComboBox):
 
     def updateText(self):
         checked_items = self.get_checked_items()
-        
-        # If the dropdown is currently open, DO NOT overwrite the lineEdit text
         if self._is_popup_open:
             return
 
         if not checked_items:
-            # We want custom display so we temporarily make it editable just to set text
             self.setEditable(True)
             self.lineEdit().setReadOnly(True)
             self.lineEdit().setText("Select Apps...")
@@ -82,11 +74,9 @@ class CheckableComboBox(QComboBox):
         return checked
 
     def set_items(self, items, initial_checked=None):
-        # Prevent refreshing and overwriting while the user is actively using the dropdown
         if self._is_popup_open:
             return
             
-        # Preserve currently checked items, or use initial_checked on boot
         if initial_checked is not None:
             current_checked = initial_checked
         else:

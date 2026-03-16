@@ -10,8 +10,5 @@ def format_app_name(name):
     display_name = name
     if display_name.lower().endswith('.exe'):
         display_name = display_name[:-4]
-    
-    # Capitalize first letter, keep rest as is (to preserve camelCase if it exists? 
-    # User asked for "first letter upper", usually .capitalize() lowers the rest.
-    # Let's stick to .capitalize() as it's cleaner for file names.
+
     return display_name.capitalize()
