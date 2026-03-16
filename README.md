@@ -53,6 +53,6 @@ pyinstaller Gainhour.spec
 
 - Startup may not work.
 
-- U can change defoult theses in \themes folder
+- U can change defoult themes in \themes folder
 
-- Default ignored apps can be modified in \core\tracker.py line 30 ```bash self.ignored_apps = {"explorer.exe", "SearchApp.exe", "ShellExperienceHost.exe"}```
+- Default ignored apps can be modified in \core\tracker.py line 30 ```self.ignored_apps = {"explorer.exe", "SearchApp.exe", "ShellExperienceHost.exe"}```
