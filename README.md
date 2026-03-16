@@ -51,7 +51,7 @@ pyinstaller Gainhour.spec
 - **Statistics Tab:** Visualize your tracked time through daily breakdowns and lifetime charts. Create custom groupings to compare specific apps.
 - **Settings Tab:** Configure startup behavior, manage log history, toggle Discord integration globally, choose UI themes, and manage or reset your underlying database.
 
-- Startup may not work.
+- Startup may not work. In that case just move it into Startup
 
 - U can change defoult themes in \themes folder
 
